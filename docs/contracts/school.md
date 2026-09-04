@@ -25,6 +25,9 @@ School tenancy and product roles: the school row, membership, and the guards eve
 ## Acceptance
 - `L2-SCHOOL-08` — A signed-in non-member visiting `/learn` lands on `/backflip`. A student visiting a teacher route lands on `/learn`. A teacher reaches both.
 
+- `L2-SCHOOL-09` — Invite: `/backflip/school` (owner, capability `users.edit`) + server action `inviteMember`. Validated by `inviteMemberSchema` (`_lib/validation.ts`) — email normalized to lowercase, role ∈ `teacher | student`. Creates the `user` row when absent (no password → Google-only) and upserts the `school_member` row, so re-inviting changes a role rather than failing. Welcome email is best-effort (`L2-EMAIL-11`); a send failure never undoes the invite.
+- `L2-SCHOOL-10` — There is no invite token and no accept page. `L2-AUTH-10` already refuses Google sign-in for any email without a `user` row and `L2-AUTH-41` requires a verified address, so creating the row is the invite. An expiring invite would add a `user_token` type (`L2-DB-20`) without changing this flow's shape.
+
 ## Constrained L3
 - `/docs/notes/school.md`
 

@@ -9,7 +9,9 @@
  * @spec L2-SCHOOL-03
  */
 
-export type SchoolRole = "teacher" | "student"
+export const SCHOOL_ROLES = ["teacher", "student"] as const
+
+export type SchoolRole = (typeof SCHOOL_ROLES)[number]
 
 export type Membership = { schoolId: string; role: SchoolRole }
 

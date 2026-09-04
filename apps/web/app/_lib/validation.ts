@@ -1,6 +1,7 @@
 import { z } from "zod"
 
 import { isRole, type Role } from "@/app/_lib/auth/permissions"
+import { SCHOOL_ROLES } from "@/app/_lib/school/roles"
 
 /**
  * Shared input schemas for the admin user-management surfaces. Centralizes the
@@ -62,3 +63,24 @@ export const updateUserSchema = z.object({
 export function firstError(error: z.ZodError): string {
   return error.issues[0]?.message ?? "Invalid input."
 }
+
+const schoolRoleField = z
+  .string()
+  .refine(
+    (v): v is (typeof SCHOOL_ROLES)[number] =>
+      (SCHOOL_ROLES as readonly string[]).includes(v),
+    "Unknown school role."
+  )
+
+/**
+ * Inviting someone into the school. No password field: an invited member signs
+ * in with Google, which `L2-AUTH-10` permits precisely because the invite has
+ * created their `user` row.
+ *
+ * @spec L2-SCHOOL-09
+ */
+export const inviteMemberSchema = z.object({
+  name: nameField,
+  email: emailField,
+  role: schoolRoleField,
+})
