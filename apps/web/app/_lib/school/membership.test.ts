@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { isTeacher } from "@/app/_lib/school"
+import { isTeacher } from "@/app/_lib/school/roles"
 
 describe("isTeacher", () => {
   it("is true only for the teacher role", () => {

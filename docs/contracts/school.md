@@ -12,7 +12,7 @@ School tenancy and product roles: the school row, membership, and the guards eve
 ## Interfaces
 - `L2-SCHOOL-01` — `school` table, exactly one row, seeded by migration. The multi-school seam: a second school is new rows, not a schema change. (`L2-DB-38`)
 - `L2-SCHOOL-02` — `school_member` table — `(schoolId, userId)` unique, `role` ∈ `teacher | student`. (`L2-DB-39`)
-- `L2-SCHOOL-03` — `@/app/_lib/school` → `isTeacher` (pure, client-safe), `getCurrentSchoolId()`, `getMembership(userId)`, `requireMembership()`, `requireTeacher()`. The last two are server-only guards: no session → `/backflip/login`; non-member → `/backflip`; student hitting a teacher route → `/learn`.
+- `L2-SCHOOL-03` — `@/app/_lib/school` → `isTeacher` (pure, client-safe), `getCurrentSchoolId()`, `getMembership(userId)`, `requireMembership()`, `requireTeacher()`. The last two are server-only guards: no session → `/backflip/login`; non-member → `/backflip`; student hitting a teacher route → `/learn`. Split across two files: `school/roles.ts` holds the role types and `isTeacher` (no `server-only` / db / auth imports — safe for client components and for unit tests), `school/index.ts` is the `server-only` module with the DB-backed functions and re-exports `roles.ts` so every caller still imports from `@/app/_lib/school`.
 
 ## Invariants
 - `L2-SCHOOL-04` — Two role axes, never merged. `user.role` gates `/backflip/*` and nothing else; `school_member.role` gates `/learn/*` and nothing else. Neither implies the other; one person may hold both.
