@@ -170,7 +170,7 @@ Expected: a new SQL file creating `course_status`, `course`, `deck`, `card`, `en
 - [ ] **Step 3: Verify the tables exist**
 
 ```bash
-docker compose exec backflip-db psql -U postgres -d backflip -c "\dt"
+docker exec backflip-db psql -U backflip -d backflip -c "\dt"
 ```
 
 Expected: `course`, `deck`, `card`, `enrollment` present.
@@ -726,7 +726,7 @@ corepack yarn dev
 Signed in as a teacher (plan 1 task 4 invited one), visit http://localhost:3070/learn/courses. Create a course, open it, publish it, unpublish it. Then confirm a student is refused:
 
 ```bash
-docker compose exec backflip-db psql -U postgres -d backflip -c \
+docker exec backflip-db psql -U backflip -d backflip -c \
   "update school_member set role = 'student' where \"userId\" = (select id from \"user\" where role = 'owner');"
 ```
 
@@ -1478,7 +1478,7 @@ corepack yarn dev
 Invite a second person as a student from `/backflip/school`. As the teacher, open a course, click Students, enrol them. Confirm they move out of the dropdown and into the list. Submit the same enrolment twice by going back and forward: expect no error and no duplicate row.
 
 ```bash
-docker compose exec backflip-db psql -U postgres -d backflip -c "select count(*) from enrollment;"
+docker exec backflip-db psql -U backflip -d backflip -c "select count(*) from enrollment;"
 ```
 
 - [ ] **Step 6: Typecheck, lint, test**
