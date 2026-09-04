@@ -599,3 +599,57 @@ export const chromePresets = pgTable(
     index("chrome_preset_type_idx").on(t.type),
   ]
 )
+
+/**
+ * School roles. Deliberately separate from `user_role` (`L2-DB-05`): that one
+ * says what a person may do in the operator console, this one says whether
+ * they author cards or study them. One person may hold both.
+ */
+export const schoolRole = pgEnum("school_role", ["teacher", "student"])
+
+/**
+ * A school. Exactly one row today — the seam for multiple schools later, so
+ * that adding the second is new rows rather than a migration plus an audit of
+ * every query written in the meantime.
+ *
+ * @spec L2-SCHOOL-01
+ */
+export const schools = pgTable("school", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  name: text("name").notNull(),
+  /** URL-safe handle. Unique so it can address a school in a path later. */
+  slug: text("slug").unique().notNull(),
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+})
+
+/**
+ * Membership of a person in a school, carrying their product role. A table
+ * rather than columns on `user`, because this is what makes multi-school a
+ * data change instead of a schema change.
+ *
+ * @spec L2-SCHOOL-02
+ */
+export const schoolMembers = pgTable(
+  "school_member",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    schoolId: text("schoolId")
+      .notNull()
+      .references(() => schools.id, { onDelete: "cascade" }),
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    role: schoolRole("role").notNull(),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [
+    // One membership per person per school. A role change is an update.
+    uniqueIndex("school_member_school_user_idx").on(t.schoolId, t.userId),
+    // "Which schools is this person in" — the session-path query.
+    index("school_member_user_idx").on(t.userId),
+  ]
+)
