@@ -137,7 +137,7 @@ corepack yarn db:migrate
 - [ ] **Step 3: Verify the critical index exists**
 
 ```bash
-docker compose exec backflip-db psql -U postgres -d backflip -c "\d card_state"
+docker exec backflip-db psql -U backflip -d backflip -c "\d card_state"
 ```
 
 Expected: `card_state_user_due_idx` on `("userId", due)` is listed. Without it the study screen does a sequential scan on every load.
@@ -1107,9 +1107,9 @@ corepack yarn dev
 5. Confirm the writes:
 
 ```bash
-docker compose exec backflip-db psql -U postgres -d backflip -c \
+docker exec backflip-db psql -U backflip -d backflip -c \
   "select rating, count(*) from review_log group by rating order by rating;"
-docker compose exec backflip-db psql -U postgres -d backflip -c \
+docker exec backflip-db psql -U backflip -d backflip -c \
   "select state, reps, lapses, due from card_state order by due;"
 ```
 

@@ -130,7 +130,7 @@ corepack yarn db:migrate
 Then confirm the seeded row exists:
 
 ```bash
-docker compose exec backflip-db psql -U postgres -d backflip -c "select slug, name from school;"
+docker exec backflip-db psql -U backflip -d backflip -c "select slug, name from school;"
 ```
 
 Expected: exactly one row, `default | Default School`.
@@ -525,7 +525,7 @@ Check three things at http://localhost:3070:
 For step 3:
 
 ```bash
-docker compose exec backflip-db psql -U postgres -d backflip -c \
+docker exec backflip-db psql -U backflip -d backflip -c \
   "insert into school_member (id, \"schoolId\", \"userId\", role) \
    select gen_random_uuid()::text, s.id, u.id, 'teacher' \
    from school s, \"user\" u where u.role = 'owner' limit 1;"
@@ -920,7 +920,7 @@ corepack yarn dev
 Signed in as the owner, go to http://localhost:3070/backflip/school and invite `student@example.test` as a student. Confirm the row appears in the table, then confirm the database agrees:
 
 ```bash
-docker compose exec backflip-db psql -U postgres -d backflip -c \
+docker exec backflip-db psql -U backflip -d backflip -c \
   "select u.email, m.role from school_member m join \"user\" u on u.id = m.\"userId\";"
 ```
 
