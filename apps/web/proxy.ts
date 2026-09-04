@@ -66,5 +66,7 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/backflip/:path*"],
+  // Both gated scopes share one session and one redirect rule. `/learn/*` has
+  // no public paths of its own — its login page is the admin one.
+  matcher: ["/backflip/:path*", "/learn/:path*"],
 }
