@@ -21,15 +21,5 @@ export default defineConfig({
     environment: "node",
     include: ["**/*.test.{ts,tsx}"],
     exclude: ["**/node_modules/**", "**/.next/**", "e2e/**"],
-    server: {
-      deps: {
-        // Externalized deps load via native Node ESM, which can't resolve
-        // next-auth's extensionless `import ... from "next/server"` — next
-        // ships no "exports" map, so Node won't probe for the file the way
-        // `require` or Next's own bundler do. Inlining routes next-auth
-        // through Vite's resolver instead, which handles it fine.
-        inline: ["next-auth"],
-      },
-    },
   },
 })

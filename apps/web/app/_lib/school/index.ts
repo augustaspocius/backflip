@@ -7,6 +7,8 @@ import { eq } from "drizzle-orm"
 
 import { auth } from "@/app/_lib/auth"
 
+import { isTeacher, type Membership } from "./roles"
+
 /**
  * School membership — the product's authorization axis, and the single place
  * every `/learn/*` query goes through to learn which school it is scoped to.
@@ -16,17 +18,14 @@ import { auth } from "@/app/_lib/auth"
  * whether they author cards or study them (`school_member.role`). Neither
  * implies the other.
  *
+ * The role types and `isTeacher` live in `./roles` (pure, no server-only /
+ * db / auth imports) and are re-exported here so callers keep importing
+ * everything from `@/app/_lib/school`.
+ *
  * @spec L2-SCHOOL-01, L2-SCHOOL-02, L2-SCHOOL-03
  */
 
-export type SchoolRole = "teacher" | "student"
-
-export type Membership = { schoolId: string; role: SchoolRole }
-
-/** Pure, so it is safe to import from client components for cosmetic gating. */
-export function isTeacher(role: SchoolRole | null | undefined) {
-  return role === "teacher"
-}
+export * from "./roles"
 
 /**
  * The school this deployment serves. One row exists (seeded by migration), so
