@@ -9,8 +9,9 @@ import { OWNER, TEAMMATE } from "./env"
  * TEAMMATE has no membership, so it doubles as the "signed-in non-member"
  * fixture.
  *
- * Covers L2-SCHOOL-08 (the /learn gate) and L2-SCHOOL-09 (the invite
- * round-trip, including idempotency).
+ * Covers L2-SCHOOL-08 (the /learn gate), L2-SCHOOL-09 (the invite
+ * round-trip, including idempotency), and L2-AUTH-47 (the login page's
+ * `from`/callback validation lands a /learn sign-in back on /learn).
  */
 
 async function login(page: Page, email: string, password: string) {
@@ -27,6 +28,25 @@ test("logged out, /learn redirects to login carrying from", async ({
 
   await expect(page).toHaveURL("/backflip/login?from=%2Flearn")
   await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible()
+})
+
+test("a member signing in from /learn lands on /learn, not /backflip", async ({
+  page,
+}) => {
+  await page.goto("/learn")
+  await expect(page).toHaveURL("/backflip/login?from=%2Flearn")
+
+  await page.getByLabel("Email").fill(OWNER.email)
+  await page.getByLabel("Password").fill(OWNER.password)
+  await page.getByRole("button", { name: "Sign in" }).click()
+
+  await expect(page).toHaveURL("/learn")
+  await expect(page.getByRole("link", { name: "Repeat & Learn" })).toBeVisible()
+
+  // Revisiting the login page while already signed in with a /learn `from`
+  // must also honor it, not just the first post-login redirect.
+  await page.goto("/backflip/login?from=%2Flearn")
+  await expect(page).toHaveURL("/learn")
 })
 
 test("signed-in non-member is redirected off /learn", async ({ page }) => {
