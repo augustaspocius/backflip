@@ -3,8 +3,12 @@ import { eq } from "drizzle-orm"
 
 import { requireCapability } from "@/app/_lib/auth/guard"
 import { getCurrentSchoolId } from "@/app/_lib/school"
+import type { Metadata } from "next"
 
+import { titleFor } from "../../_lib/crumbs"
 import { InviteForm } from "./_components/invite-form"
+
+export const metadata: Metadata = { title: titleFor("/backflip/school") }
 
 /**
  * School membership admin. Owner-only, in the operator console rather than
