@@ -14,6 +14,11 @@ export const JUMP_GROUPS: {
         keywords: "users people team",
       },
       {
+        label: "School",
+        href: "/backflip/school",
+        keywords: "learn teachers students invite courses school members",
+      },
+      {
         label: "Account",
         href: "/backflip/account",
         keywords: "profile email password my account",

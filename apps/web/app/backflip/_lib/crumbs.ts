@@ -37,6 +37,7 @@ export const TITLE_PREFIX = "B"
 const CRUMBS: { match: (p: string) => boolean; trail: string[] }[] = [
   { match: (p) => p === "/backflip", trail: ["Overview"] },
   { match: (p) => p.startsWith("/backflip/users"), trail: ["Members"] },
+  { match: (p) => p.startsWith("/backflip/school"), trail: ["School"] },
   { match: (p) => p.startsWith("/backflip/docs"), trail: ["Platform", "Docs"] },
   {
     match: (p) => p.startsWith("/backflip/ui-samples"),
