@@ -3,12 +3,12 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 
 import bcrypt from "bcryptjs"
-import { sql } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 import { drizzle } from "drizzle-orm/node-postgres"
 import { migrate } from "drizzle-orm/node-postgres/migrator"
 import pg from "pg"
 
-import { users } from "@workspace/db/schema"
+import { schoolMembers, schools, users } from "@workspace/db/schema"
 import {
   ADMIN_DATABASE_URL,
   BASE_URL,
@@ -59,6 +59,23 @@ async function migrateAndSeed() {
         name: account.name,
         role: account.role,
         passwordHash: await bcrypt.hash(account.password, 10),
+      })
+    }
+
+    // OWNER also gets a school_member row (role `teacher`) in the seeded
+    // school, so the suite gets both the "member" and "signed-in non-member"
+    // cases for free — a member (OWNER) and a non-member (TEAMMATE) — without
+    // a third fixture user.
+    const [owner] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, OWNER.email))
+    const [school] = await db.select({ id: schools.id }).from(schools).limit(1)
+    if (owner && school) {
+      await db.insert(schoolMembers).values({
+        schoolId: school.id,
+        userId: owner.id,
+        role: "teacher",
       })
     }
   } finally {
