@@ -1,6 +1,6 @@
 import Link from "next/link"
 
-import type { SchoolRole } from "@/app/_lib/school"
+import type { SchoolRole } from "@/app/_lib/school/roles"
 
 /**
  * Top bar for `/learn`. The teacher link is cosmetic gating only — the routes

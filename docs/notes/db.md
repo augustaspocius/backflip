@@ -61,4 +61,4 @@
 - `school_member.role` is deliberately separate from `user.role` (`L2-DB-05`): the former gates the future `/learn/*` surface (course/study access), the latter gates the operator console. One person may hold both roles independently.
 - Unique `(schoolId, userId)` on `school_member` — a role change is an `UPDATE`, not a second membership row. Index on `userId` for the "which schools is this person in" session-path lookup.
 - Both fks (`schoolId` → `school`, `userId` → `user`) cascade on delete — deleting a school or a user takes its memberships with it.
-- No app code consumes `schools`/`schoolMembers` yet — guards and UI are later tasks in this plan.
+- App code consumes both tables now: `apps/web/app/_lib/school/index.ts` (`getCurrentSchoolId`, `getMembership`, `requireMembership`, `requireTeacher`), the `/learn/*` shell, and `/backflip/school`'s invite flow (`_actions.ts`, `page.tsx`). See `docs/contracts/school.md` and `docs/notes/school.md`.
