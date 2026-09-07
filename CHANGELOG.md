@@ -1,3 +1,10 @@
+# [1.19.0](https://github.com/dev-geddy/backflip/compare/v1.18.0...v1.19.0) (2026-09-07)
+
+
+### Features
+
+* **web:** surface mcp scope gaps and trim the public site to the hero ([#47](https://github.com/dev-geddy/backflip/issues/47)) ([62c395e](https://github.com/dev-geddy/backflip/commit/62c395ead3794147ffc04bc4beef1ed29e23e0f4))
+
 # [1.18.0](https://github.com/dev-geddy/backflip/compare/v1.17.0...v1.18.0) (2026-09-05)
 
 
