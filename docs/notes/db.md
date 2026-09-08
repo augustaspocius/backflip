@@ -73,3 +73,7 @@
 - `enrollment` unique `(courseId, userId)` — enrolling the same student twice is a mistake, not a second enrolment; index on `userId` for the student's "my courses" query. Enrolment is teacher-created in v1; there is no student self-enrol path.
 - Cascade chain: deleting a `school` takes its `course`s; deleting a `course` takes its `deck`s and `enrollment`s; deleting a `deck` takes its `card`s. Deleting a `user` cascades their `enrollment`s but only nulls their `course.ownerId`.
 - `docs/contracts/courses.md` does not exist yet (arrives in a later task in this plan) — the `@spec L2-COURSE-01`..`L2-COURSE-04` tags on the schema forward-reference it and resolve once that contract is written.
+- Cross-table coherence (`course.schoolId` vs. the owner's membership; `enrollment` vs. its course's school) is unenforced by the database — see `L2-DB-44`. Both are deliberate, code-side invariants, not gaps to close with a trigger or check constraint.
+- Watch-items, not omissions — each index below is currently correct because nothing reads on that column yet; adding one now would be write cost with no reader:
+  - No index on `course.ownerId`. Harmless today because the only authoring listing query filters on `schoolId`, not owner. Revisit if a "courses I authored" view is added.
+  - No index touching `course.status`. Harmless today because the student dashboard reaches courses through `enrollment` and joins on the primary key, never scans by status. Revisit if a "browse all published courses in the school" view is added.
