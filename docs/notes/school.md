@@ -4,7 +4,7 @@
 
 ## File map
 - `packages/db/src/schema.ts` — `schoolRole` enum (`teacher | student`), `schools` table (`id`, `name`, `slug` unique, `createdAt`), `schoolMembers` table (`id`, `schoolId` fk cascade, `userId` fk cascade, `role`, `createdAt`; unique `(schoolId, userId)`, index on `userId`). Satisfies `L2-SCHOOL-01`, `L2-SCHOOL-02`, `L2-DB-38`, `L2-DB-39`.
-- `packages/db/migrations/0019_*.sql` — creates both tables, seeds one row (`Default School` / `default`, `ON CONFLICT DO NOTHING`).
+- `packages/db/migrations/0020_*.sql` — creates both tables, seeds one row (`Default School` / `default`, `ON CONFLICT DO NOTHING`).
 - `apps/web/app/_lib/school/roles.ts` — the pure half: `SCHOOL_ROLES` (`["teacher", "student"] as const`), `SchoolRole` (derived from `SCHOOL_ROLES`, not hand-typed, so the type and the runtime list can't drift), `Membership`, `isTeacher`. No `server-only`, no `@workspace/db`, no `@/app/_lib/auth` import — so `@/app/_lib/validation.ts` and client components (the invite form's role `<select>`, `learn-nav.tsx`'s `SchoolRole` type import) import from here directly. Satisfies `L2-SCHOOL-03`.
 - `apps/web/app/_lib/school/index.ts` — the `server-only` half: `getCurrentSchoolId()`, `getMembership(userId)`, `requireMembership()`, `requireTeacher()`, plus `export * from "./roles"` so `@/app/_lib/school` still exposes everything. `getCurrentSchoolId()` and `getMembership()` both order (`createdAt` asc, `id` asc as tiebreak) before `limit(1)`, so the pick is deterministic rather than whatever Postgres happens to return first. Satisfies `L2-SCHOOL-03`, `L2-SCHOOL-11`.
 - `apps/web/app/_lib/school/membership.test.ts` — unit test for `isTeacher` only, imports from `@/app/_lib/school/roles` directly (see gotcha below).

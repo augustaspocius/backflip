@@ -653,3 +653,114 @@ export const schoolMembers = pgTable(
     index("school_member_user_idx").on(t.userId),
   ]
 )
+
+/** Draft courses are invisible to students; publishing activates enrolments. */
+export const courseStatus = pgEnum("course_status", ["draft", "published"])
+
+/**
+ * A course: the unit a student enrols in. Owned by a teacher, scoped to a
+ * school. `schoolId` is denormalized onto the course (rather than reached via
+ * the owner's membership) so every listing query is one indexed read.
+ *
+ * @spec L2-COURSE-01
+ */
+export const courses = pgTable(
+  "course",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    schoolId: text("schoolId")
+      .notNull()
+      .references(() => schools.id, { onDelete: "cascade" }),
+    /** The authoring teacher. Deleting them keeps the course, ownerless. */
+    ownerId: text("ownerId").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    title: text("title").notNull(),
+    description: text("description"),
+    status: courseStatus("status").notNull().default("draft"),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [
+    // "Courses in my school", the only listing query.
+    index("course_school_idx").on(t.schoolId),
+  ]
+)
+
+/**
+ * A deck: a named group of cards inside a course. Ordering is an explicit
+ * integer, not creation time, so a teacher can reorder without touching rows'
+ * timestamps.
+ *
+ * @spec L2-COURSE-02
+ */
+export const decks = pgTable(
+  "deck",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    courseId: text("courseId")
+      .notNull()
+      .references(() => courses.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    position: integer("position").notNull().default(0),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [index("deck_course_idx").on(t.courseId)]
+)
+
+/**
+ * A card: the atom a student reviews. `front` and `back` are markdown, with
+ * images as markdown image references. No card type column in v1 — every card
+ * is front/back and self-rated (`L2-SRS-05`).
+ *
+ * @spec L2-COURSE-03
+ */
+export const cards = pgTable(
+  "card",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    deckId: text("deckId")
+      .notNull()
+      .references(() => decks.id, { onDelete: "cascade" }),
+    front: text("front").notNull(),
+    back: text("back").notNull(),
+    position: integer("position").notNull().default(0),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [index("card_deck_idx").on(t.deckId)]
+)
+
+/**
+ * A student's enrolment in a course. Created by the teacher; the student does
+ * not self-enrol in v1.
+ *
+ * @spec L2-COURSE-04
+ */
+export const enrollments = pgTable(
+  "enrollment",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    courseId: text("courseId")
+      .notNull()
+      .references(() => courses.id, { onDelete: "cascade" }),
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [
+    // Enrolling twice is a mistake, not a second enrolment.
+    uniqueIndex("enrollment_course_user_idx").on(t.courseId, t.userId),
+    // "My courses", the student dashboard query.
+    index("enrollment_user_idx").on(t.userId),
+  ]
+)
