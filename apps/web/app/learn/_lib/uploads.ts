@@ -21,8 +21,14 @@ const ALLOWED = new Map<string, string>([
   ["webp", "webp"],
 ])
 
+// `?.trim() ||`, not `??`: dotenv sets an empty `UPLOAD_DIR=` line (as ships
+// in `.env.example`/`devops/env/production.env.example`, both intentionally
+// commented out now) to `""`, not `undefined`, so `??` would never fall back
+// and every write would target `join("", name)` — a cwd-relative path, wrong
+// on a fresh clone and broken again on the droplet. Same pattern as
+// `telemetrySalt()` in `apps/web/app/_lib/telemetry/config.ts`.
 export const UPLOAD_DIR =
-  process.env.UPLOAD_DIR ?? join(process.cwd(), "shared", "uploads")
+  process.env.UPLOAD_DIR?.trim() || join(process.cwd(), "shared", "uploads")
 
 /**
  * A safe stored name for an upload, or null when the type is not permitted.

@@ -1,4 +1,6 @@
-import { describe, expect, it } from "vitest"
+import { join } from "node:path"
+
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import {
   UPLOAD_DIR,
@@ -6,6 +8,46 @@ import {
   safeUploadName,
   uploadPath,
 } from "@/app/learn/_lib/uploads"
+
+// `UPLOAD_DIR` is computed once, at module load, from `process.env` — so
+// proving the empty-string case needs a fresh module instance per value
+// rather than `vi.stubEnv` alone (that only affects reads that happen after
+// it runs, and this module's read already happened at import time above).
+afterEach(() => {
+  vi.unstubAllEnvs()
+  vi.resetModules()
+})
+
+describe("UPLOAD_DIR", () => {
+  const DEFAULT = join(process.cwd(), "shared", "uploads")
+
+  it("falls back to the default when unset", async () => {
+    vi.stubEnv("UPLOAD_DIR", undefined)
+    const mod = await import("@/app/learn/_lib/uploads")
+    expect(mod.UPLOAD_DIR).toBe(DEFAULT)
+  })
+
+  // The actual regression: `cp .env.example .env` ships `UPLOAD_DIR=`, which
+  // dotenv sets to `""`, not `undefined` — a plain `??` fallback never fires
+  // on that, and every upload would resolve under `join("", name)` instead.
+  it("falls back to the default when the env var is an empty string", async () => {
+    vi.stubEnv("UPLOAD_DIR", "")
+    const mod = await import("@/app/learn/_lib/uploads")
+    expect(mod.UPLOAD_DIR).toBe(DEFAULT)
+  })
+
+  it("falls back to the default when the env var is whitespace only", async () => {
+    vi.stubEnv("UPLOAD_DIR", "   ")
+    const mod = await import("@/app/learn/_lib/uploads")
+    expect(mod.UPLOAD_DIR).toBe(DEFAULT)
+  })
+
+  it("uses a real, non-empty override verbatim (trimmed)", async () => {
+    vi.stubEnv("UPLOAD_DIR", "  /var/www/example/shared/uploads  ")
+    const mod = await import("@/app/learn/_lib/uploads")
+    expect(mod.UPLOAD_DIR).toBe("/var/www/example/shared/uploads")
+  })
+})
 
 describe("safeUploadName", () => {
   it("keeps a permitted extension and discards the original name", () => {
