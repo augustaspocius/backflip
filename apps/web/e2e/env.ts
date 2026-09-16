@@ -31,3 +31,37 @@ export const TEAMMATE = {
   name: "Tim Teammate",
   role: "teammate" as const,
 }
+
+/**
+ * A teacher in a SECOND school (`RIVAL_SCHOOL` below), used only to prove
+ * cross-school isolation in `authoring.spec.ts`: OWNER (default school) must
+ * never reach a course OUTSIDER owns, and vice versa. Platform role
+ * `teammate` — this account's product role lives in `school_member`, not
+ * `user.role`.
+ */
+export const OUTSIDER = {
+  email: "outsider@e2e.test",
+  password: "e2e-Outsider-Pass-2026",
+  name: "Olivia Outsider",
+  role: "teammate" as const,
+}
+
+/**
+ * A student in the default school, distinct from TEAMMATE (which plan 1's
+ * `learn.spec.ts` deliberately keeps membership-free as the "signed-in
+ * non-member" fixture — see `global-setup.ts`). Enrolled by OWNER in the
+ * authoring happy path.
+ */
+export const STUDENT = {
+  email: "student@e2e.test",
+  password: "e2e-Student-Pass-2026",
+  name: "Sam Student",
+  role: "teammate" as const,
+}
+
+/** Second school, seeded alongside the migration-seeded `default` one, so
+ *  the suite can prove a course is unreachable across school boundaries. */
+export const RIVAL_SCHOOL = {
+  name: "Rival School",
+  slug: "rival",
+}
