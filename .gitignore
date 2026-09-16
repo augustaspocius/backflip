@@ -59,6 +59,11 @@ yarn-error.log*
 # local screenshot capture (playwright driver + generated PNGs)
 .screenshots
 
+# card image uploads (UPLOAD_DIR default) — never committed, mirrors the
+# droplet's persistent shared/ dir
+apps/web/shared/
+shared/
+
 # vercel
 .vercel
 

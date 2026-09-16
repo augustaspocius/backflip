@@ -6,6 +6,7 @@ import { and, eq } from "drizzle-orm"
 import { requireTeacher } from "@/app/_lib/school"
 import { Markdown } from "@/app/learn/_components/markdown"
 import { CardEditor } from "./_components/card-editor"
+import { ImageUpload } from "./_components/image-upload"
 
 /**
  * Deck detail: the cards in it, and the form to add one. Ownership is proven
@@ -54,6 +55,11 @@ export default async function DeckPage({
       </ul>
 
       <CardEditor deckId={deck.id} />
+
+      <div className="space-y-2 border-t pt-6">
+        <h2 className="text-sm font-medium">Get an image URL to paste</h2>
+        <ImageUpload />
+      </div>
     </div>
   )
 }
