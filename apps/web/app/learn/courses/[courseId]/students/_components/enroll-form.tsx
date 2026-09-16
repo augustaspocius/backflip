@@ -4,6 +4,7 @@ import { useActionState } from "react"
 
 import { Button } from "@workspace/ui/components/button"
 
+import { ActionMessage } from "@/app/learn/_components/action-message"
 import type { ActionState } from "../../../_actions"
 import { enrollStudent } from "../_actions"
 
@@ -47,9 +48,7 @@ export function EnrollForm({
       <Button type="submit" disabled={pending}>
         {pending ? "Enrolling…" : "Enrol"}
       </Button>
-      {state && !state.ok && (
-        <p className="text-destructive text-sm">{state.message}</p>
-      )}
+      <ActionMessage state={state} />
     </form>
   )
 }

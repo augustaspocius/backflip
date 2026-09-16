@@ -1,15 +1,49 @@
 "use client"
 
 import Link from "next/link"
-import { useActionState } from "react"
+import { useActionState, useState, useTransition } from "react"
 
 import { Button } from "@workspace/ui/components/button"
 import { Input } from "@workspace/ui/components/input"
 
+import { ActionMessage } from "@/app/learn/_components/action-message"
 import type { ActionState } from "../../_actions"
-import { createDeck } from "../_actions"
+import { createDeck, deleteDeck } from "../_actions"
 
 export type DeckRow = { id: string; title: string; cardCount: number }
+
+/**
+ * One deck's delete control. `deleteDeck` takes a positional `deckId`, not
+ * `(prevState, formData)`, so this follows the same `useTransition` + local
+ * state shape as `CourseHeader`'s publish toggle rather than reshaping the
+ * action to fit `useActionState`. No confirmation step — smaller blast
+ * radius than a course delete, and a per-control confirm on every minor
+ * delete is not warranted here.
+ */
+function DeleteDeckButton({ deckId }: { deckId: string }) {
+  const [pending, start] = useTransition()
+  const [result, setResult] = useState<ActionState>(null)
+
+  return (
+    <span className="flex items-center gap-2">
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        disabled={pending}
+        onClick={() =>
+          start(async () => {
+            setResult(null)
+            setResult(await deleteDeck(deckId))
+          })
+        }
+      >
+        {pending ? "Deleting…" : "Delete"}
+      </Button>
+      <ActionMessage state={result} />
+    </span>
+  )
+}
 
 /** Decks in a course, with an inline add form. */
 export function DeckList({
@@ -40,6 +74,7 @@ export function DeckList({
             <span className="text-muted-foreground ml-auto text-xs">
               {d.cardCount} card{d.cardCount === 1 ? "" : "s"}
             </span>
+            <DeleteDeckButton deckId={d.id} />
           </li>
         ))}
         {decks.length === 0 && (
@@ -55,9 +90,7 @@ export function DeckList({
         </Button>
       </form>
 
-      {state && !state.ok && (
-        <p className="text-destructive text-sm">{state.message}</p>
-      )}
+      <ActionMessage state={state} />
     </div>
   )
 }
