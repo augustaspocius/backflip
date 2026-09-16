@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useState, useTransition } from "react"
 
 import { Button } from "@workspace/ui/components/button"
@@ -45,9 +46,15 @@ export function CourseHeader({
         )}
       </div>
 
+      <Link
+        href={`/learn/courses/${courseId}/students`}
+        className="text-muted-foreground hover:text-foreground ml-auto text-sm"
+      >
+        Students
+      </Link>
+
       <Button
         variant="outline"
-        className="ml-auto"
         disabled={pending}
         onClick={() =>
           start(async () => {
