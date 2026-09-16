@@ -1,10 +1,11 @@
 import { notFound } from "next/navigation"
 
-import { courses, db } from "@workspace/db"
-import { and, eq } from "drizzle-orm"
+import { cards, courses, db, decks as decksTable } from "@workspace/db"
+import { and, count, eq } from "drizzle-orm"
 
 import { requireTeacher } from "@/app/_lib/school"
 import { CourseHeader } from "./_components/course-header"
+import { DeckList } from "./_components/deck-list"
 
 /**
  * Course detail. The school check lives in the WHERE clause, so a course id
@@ -27,6 +28,18 @@ export default async function CoursePage({
 
   if (!course) notFound()
 
+  const deckRows = await db
+    .select({
+      id: decksTable.id,
+      title: decksTable.title,
+      cardCount: count(cards.id),
+    })
+    .from(decksTable)
+    .leftJoin(cards, eq(cards.deckId, decksTable.id))
+    .where(eq(decksTable.courseId, course.id))
+    .groupBy(decksTable.id)
+    .orderBy(decksTable.position, decksTable.title)
+
   return (
     <div className="space-y-8">
       <CourseHeader
@@ -35,9 +48,7 @@ export default async function CoursePage({
         description={course.description}
         status={course.status}
       />
-      <p className="text-muted-foreground text-sm">
-        Decks appear here once deck management lands.
-      </p>
+      <DeckList courseId={course.id} decks={deckRows} />
     </div>
   )
 }
