@@ -6,6 +6,7 @@ import { Button } from "@workspace/ui/components/button"
 import { Input } from "@workspace/ui/components/input"
 import { Label } from "@workspace/ui/components/label"
 
+import { ActionMessage } from "@/app/learn/_components/action-message"
 import { uploadCardImage, type UploadState } from "../_upload-actions"
 
 /**
@@ -38,6 +39,8 @@ export function ImageUpload() {
         {pending ? "Uploading…" : "Upload image"}
       </Button>
 
+      <ActionMessage state={state} />
+
       {state?.ok && state.url && (
         <div className="space-y-2">
           <Label htmlFor="card-image-snippet">
@@ -50,10 +53,6 @@ export function ImageUpload() {
             onFocus={(e) => e.currentTarget.select()}
           />
         </div>
-      )}
-
-      {state && !state.ok && (
-        <p className="text-destructive text-sm">{state.message}</p>
       )}
     </form>
   )

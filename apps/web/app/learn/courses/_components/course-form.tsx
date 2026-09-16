@@ -7,6 +7,7 @@ import { Input } from "@workspace/ui/components/input"
 import { Label } from "@workspace/ui/components/label"
 import { Textarea } from "@workspace/ui/components/textarea"
 
+import { ActionMessage } from "@/app/learn/_components/action-message"
 import { createCourse, type ActionState } from "../_actions"
 
 /** New-course form. The action re-checks the teacher role server-side. */
@@ -37,15 +38,7 @@ export function CourseForm() {
         {pending ? "Creating…" : "Create course"}
       </Button>
 
-      {state && (
-        <p
-          className={
-            state.ok ? "text-sm text-green-600" : "text-destructive text-sm"
-          }
-        >
-          {state.message}
-        </p>
-      )}
+      <ActionMessage state={state} />
     </form>
   )
 }

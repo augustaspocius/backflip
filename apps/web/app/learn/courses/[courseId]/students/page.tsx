@@ -5,6 +5,7 @@ import { and, eq, notInArray } from "drizzle-orm"
 
 import { requireTeacher } from "@/app/_lib/school"
 import { EnrollForm } from "./_components/enroll-form"
+import { UnenrollButton } from "./_components/unenroll-button"
 
 /**
  * Roster for one course: who is enrolled, and who else could be.
@@ -54,9 +55,12 @@ export default async function StudentsPage({
 
       <ul className="divide-y">
         {enrolled.map((s) => (
-          <li key={s.id} className="py-2 text-sm">
+          <li key={s.id} className="flex items-center gap-2 py-2 text-sm">
             {s.name ?? s.email}
-            <span className="text-muted-foreground ml-2 text-xs">{s.email}</span>
+            <span className="text-muted-foreground text-xs">{s.email}</span>
+            <span className="ml-auto">
+              <UnenrollButton courseId={course.id} userId={s.id} />
+            </span>
           </li>
         ))}
         {enrolled.length === 0 && (
