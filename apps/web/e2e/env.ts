@@ -65,3 +65,19 @@ export const RIVAL_SCHOOL = {
   name: "Rival School",
   slug: "rival",
 }
+
+/**
+ * A student in `RIVAL_SCHOOL`, distinct from `OUTSIDER` (which is a teacher
+ * there). `enrollStudent`'s own cross-school check has two independent legs —
+ * "does this course belong to my school" and "is this user a student in my
+ * school" — and `OUTSIDER`'s id fails both at once (wrong school AND not a
+ * student), so it can't isolate which leg a test is actually exercising.
+ * This fixture fails only the school leg, which is what
+ * `authoring.spec.ts`'s hostile-enrolment test needs to pin down.
+ */
+export const RIVAL_STUDENT = {
+  email: "rival-student@e2e.test",
+  password: "e2e-RivalStudent-Pass-2026",
+  name: "Rita Rival",
+  role: "teammate" as const,
+}
