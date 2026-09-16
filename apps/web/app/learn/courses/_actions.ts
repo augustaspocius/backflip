@@ -105,8 +105,10 @@ export async function setCourseStatus(
 export async function deleteCourse(courseId: string): Promise<ActionState> {
   const teacher = await requireTeacher()
 
-  // Decks, cards, enrolments and every student's scheduling state go with it,
-  // by FK cascade. That is intended: an unpublished mistake should vanish.
+  // Applies identically to a published course with live enrolments: decks,
+  // cards, enrolments and every student's scheduling state go with it, by FK
+  // cascade, with no extra warning and no distinct path for that case. That
+  // is intended in v1 — unguarded, no confirmation, no undo.
   const deleted = await db
     .delete(courses)
     .where(
