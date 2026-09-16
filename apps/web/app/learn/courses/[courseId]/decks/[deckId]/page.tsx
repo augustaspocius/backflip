@@ -6,11 +6,15 @@ import { and, eq } from "drizzle-orm"
 import { requireTeacher } from "@/app/_lib/school"
 import { Markdown } from "@/app/learn/_components/markdown"
 import { CardEditor } from "./_components/card-editor"
+import { CardRow } from "./_components/card-row"
 import { ImageUpload } from "./_components/image-upload"
 
 /**
  * Deck detail: the cards in it, and the form to add one. Ownership is proven
- * by the join to `course` on the teacher's school.
+ * by the join to `course` on the teacher's school, AND the deck must belong
+ * to the `courseId` segment of the URL itself — without that second check, a
+ * deck id from a different course in the SAME school still passes the
+ * school-scoped WHERE and would render under the wrong course's URL.
  *
  * @spec L2-COURSE-06, L2-SCHOOL-06
  */
@@ -19,14 +23,20 @@ export default async function DeckPage({
 }: {
   params: Promise<{ courseId: string; deckId: string }>
 }) {
-  const { deckId } = await params
+  const { courseId, deckId } = await params
   const teacher = await requireTeacher()
 
   const [deck] = await db
     .select({ id: decks.id, title: decks.title })
     .from(decks)
     .innerJoin(courses, eq(courses.id, decks.courseId))
-    .where(and(eq(decks.id, deckId), eq(courses.schoolId, teacher.schoolId)))
+    .where(
+      and(
+        eq(decks.id, deckId),
+        eq(decks.courseId, courseId),
+        eq(courses.schoolId, teacher.schoolId)
+      )
+    )
 
   if (!deck) notFound()
 
@@ -42,12 +52,12 @@ export default async function DeckPage({
 
       <ul className="divide-y">
         {rows.map((c) => (
-          <li key={c.id} className="space-y-2 py-4">
+          <CardRow key={c.id} card={c}>
             <Markdown source={c.front} />
             <div className="text-muted-foreground border-l-2 pl-3">
               <Markdown source={c.back} />
             </div>
-          </li>
+          </CardRow>
         ))}
         {rows.length === 0 && (
           <li className="text-muted-foreground py-3 text-sm">No cards yet.</li>
