@@ -21,6 +21,7 @@ import {
   OUTSIDER,
   OWNER,
   RIVAL_SCHOOL,
+  RIVAL_STUDENT,
   STUDENT,
   TEAMMATE,
   TEST_DATABASE_URL,
@@ -93,7 +94,7 @@ async function migrateAndSeed() {
       .values({ name: RIVAL_SCHOOL.name, slug: RIVAL_SCHOOL.slug })
       .onConflictDoNothing({ target: schools.slug })
 
-    for (const account of [OWNER, TEAMMATE, OUTSIDER, STUDENT]) {
+    for (const account of [OWNER, TEAMMATE, OUTSIDER, STUDENT, RIVAL_STUDENT]) {
       await db.insert(users).values({
         email: account.email,
         name: account.name,
@@ -114,6 +115,10 @@ async function migrateAndSeed() {
       .select({ id: users.id })
       .from(users)
       .where(eq(users.email, STUDENT.email))
+    const [rivalStudent] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, RIVAL_STUDENT.email))
     // The migration-seeded school, resolved by its known slug rather than
     // "whichever school row comes back first" — with a second school row now
     // in play, an unordered `limit(1)` would be nondeterministic.
@@ -132,6 +137,10 @@ async function migrateAndSeed() {
     // STUDENT: student in the default school, for the enrolment step of the
     // authoring happy path.
     // OUTSIDER: teacher in RIVAL_SCHOOL, the cross-school isolation fixture.
+    // RIVAL_STUDENT: student in RIVAL_SCHOOL — used to post a foreign
+    // student id at `enrollStudent` and prove its own cross-school check
+    // (`L2-DB-44` hazard 2), independent of `OUTSIDER` (which fails both the
+    // school AND the role leg of that check at once, so can't isolate one).
     if (owner && defaultSchool) {
       await db.insert(schoolMembers).values({
         schoolId: defaultSchool.id,
@@ -171,6 +180,13 @@ async function migrateAndSeed() {
           title: OUTSIDER_DECK_TITLE,
         })
       }
+    }
+    if (rivalStudent && rivalSchool) {
+      await db.insert(schoolMembers).values({
+        schoolId: rivalSchool.id,
+        userId: rivalStudent.id,
+        role: "student",
+      })
     }
   } finally {
     await pool.end()

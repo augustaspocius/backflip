@@ -1,11 +1,17 @@
 import { expect, test, type Page } from "@playwright/test"
-import { eq } from "drizzle-orm"
+import { and, eq } from "drizzle-orm"
 import { drizzle } from "drizzle-orm/node-postgres"
 import pg from "pg"
 
-import { courses, decks } from "@workspace/db/schema"
+import { courses, decks, enrollments, users } from "@workspace/db/schema"
 
-import { OUTSIDER, OWNER, STUDENT, TEST_DATABASE_URL } from "./env"
+import {
+  OUTSIDER,
+  OWNER,
+  RIVAL_STUDENT,
+  STUDENT,
+  TEST_DATABASE_URL,
+} from "./env"
 import { OUTSIDER_COURSE_TITLE, OUTSIDER_DECK_TITLE } from "./global-setup"
 
 /**
@@ -23,6 +29,17 @@ import { OUTSIDER_COURSE_TITLE, OUTSIDER_DECK_TITLE } from "./global-setup"
  * fourth fixture, kept separate from `TEAMMATE`: plan 1's `learn.spec.ts`
  * deliberately leaves `TEAMMATE` with no school membership at all, as its
  * "signed-in non-member" fixture, and enrolling it here would break that.
+ * `RIVAL_STUDENT` (student, `RIVAL_SCHOOL`) exists only for the hostile-
+ * enrolment test below — see that test's own comment for why `OUTSIDER`
+ * cannot stand in for it.
+ *
+ * `enrollStudent`'s candidate `<select>` only ever offers same-school
+ * students, so the ordinary UI path can never exercise its own cross-school
+ * check. But that `<select>` is a plain uncontrolled element inside a
+ * server-action `<form>` — nothing stops a client from posting an id the
+ * dropdown never offered. One test below does exactly that (`page.evaluate`
+ * to inject an `<option>`), which is the actual threat model `L2-DB-44`
+ * hazard 2 exists for.
  *
  * @spec L2-COURSE-06, L2-COURSE-07, L2-COURSE-08, L2-COURSE-09, L2-DB-44,
  *       L2-SCHOOL-06
@@ -152,11 +169,14 @@ test("a teacher authors a course, populates it, enrols a student, and publishes 
 
     const roster = page.locator("li", { hasText: STUDENT.email })
     await expect(roster).toBeVisible()
-    // STUDENT was the only candidate in the school, so the candidate list is
-    // now empty — a second signal that the enrolment actually landed.
+    // A second, independent signal that the enrolment actually landed: the
+    // candidate dropdown no longer offers STUDENT specifically. (Not "the
+    // dropdown is now empty" — this school may pick up other students from
+    // other tests/files over time, and that assertion would then depend on
+    // file/test execution order rather than on this action's own effect.)
     await expect(
-      page.getByText("Every student in the school is already enrolled.")
-    ).toBeVisible()
+      page.locator('select[name="userId"] option', { hasText: STUDENT.email })
+    ).toHaveCount(0)
   })
 
   await test.step("publish the course — status flips to published", async () => {
@@ -225,4 +245,93 @@ test.describe("cross-school isolation", () => {
       page.getByRole("link", { name: OUTSIDER_DECK_TITLE })
     ).toBeVisible()
   })
+})
+
+test("enrollStudent rejects a hostile client posting a foreign student id, and writes nothing", async ({
+  page,
+}) => {
+  // `RIVAL_STUDENT` (student, RIVAL_SCHOOL), not `OUTSIDER` (teacher,
+  // RIVAL_SCHOOL): `OUTSIDER`'s id would fail enrollStudent's check on BOTH
+  // legs at once (wrong school AND not a student-role member), so a test
+  // using it couldn't tell which leg — the school scope or the role — is
+  // actually doing the rejecting. `RIVAL_STUDENT` fails only the school leg,
+  // which is the one `L2-DB-44` hazard 2 names: "enrollment carries no
+  // schoolId, so nothing at the database level stops enrolling a student
+  // from one school into another school's course."
+  const [rivalStudentRow] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.email, RIVAL_STUDENT.email))
+  if (!rivalStudentRow) {
+    throw new Error(
+      "RIVAL_STUDENT fixture missing — check that global-setup.ts seeded " +
+        `a school_member row for "${RIVAL_STUDENT.email}" in RIVAL_SCHOOL.`
+    )
+  }
+  const foreignStudentId = rivalStudentRow.id
+
+  await login(page, OWNER.email, OWNER.password)
+  await expect(page).toHaveURL("/backflip")
+
+  // A fresh default-school course, isolated from the happy-path test's
+  // course — this test only needs *a* course OWNER's school owns, with a
+  // Students page to tamper on.
+  const title = `Guard Check ${Date.now()}`
+  await page.goto("/learn/courses")
+  await page.getByLabel("Title").fill(title)
+  await page.getByRole("button", { name: "Create course" }).click()
+  await page.getByRole("link", { name: title }).click()
+  await expect(page).toHaveURL(/\/learn\/courses\/[^/]+$/)
+  const courseId = new URL(page.url()).pathname.split("/").pop()!
+
+  await page.goto(`/learn/courses/${courseId}/students`)
+  // Let the client bundle finish loading and React hydrate before touching
+  // the DOM by hand below — injecting into a not-yet-hydrated tree races
+  // React's own hydration pass, which reconciles away anything it didn't
+  // render itself (a real hydration-mismatch error, reproduced while writing
+  // this test). `networkidle` is a real signal tied to the browser actually
+  // finishing loading/executing the route's JS, not a blind sleep.
+  await page.waitForLoadState("networkidle")
+
+  // The dropdown never offers a foreign student — this simulates a client
+  // that doesn't respect that and posts one anyway, exactly the way a
+  // hand-crafted request or a modified DOM would. `EnrollForm`'s `<select
+  // name="userId">` is a plain uncontrolled element with no client-side
+  // validation, so this reaches the real server action over the real route,
+  // with nothing about the request marked as synthetic.
+  await page.evaluate((fakeId) => {
+    const select = document.querySelector(
+      'select[name="userId"]'
+    ) as HTMLSelectElement
+    const option = document.createElement("option")
+    option.value = fakeId
+    option.textContent = "Injected (not a real candidate)"
+    select.appendChild(option)
+  }, foreignStudentId)
+
+  // Confirm the injected option actually survived (rather than letting a
+  // hydration race fail obscurely at `selectOption` below).
+  const injectedOption = page.locator(
+    `select[name="userId"] option[value="${foreignStudentId}"]`
+  )
+  await expect(injectedOption).toHaveCount(1)
+
+  await page.locator('select[name="userId"]').selectOption(foreignStudentId)
+  await page.getByRole("button", { name: "Enrol" }).click()
+
+  // Both signals matter: the message alone could be produced by the wrong
+  // code path (e.g. a thrown error caught generically); the row count is
+  // what actually proves nothing was written.
+  await expect(page.getByText("Not a student in this school.")).toBeVisible()
+
+  const rows = await db
+    .select({ id: enrollments.id })
+    .from(enrollments)
+    .where(
+      and(
+        eq(enrollments.courseId, courseId),
+        eq(enrollments.userId, foreignStudentId)
+      )
+    )
+  expect(rows).toHaveLength(0)
 })
