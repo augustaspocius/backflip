@@ -24,6 +24,7 @@
 - Docker app: compose `env_file: [.env, .env.local]` injects env; `DATABASE_URL` overridden to `db:5432` via `environment:`. `.env.init` intentionally excluded (seed-only).
 - `.env.init` is read only by `corepack yarn init-owner` (loaded inline in `packages/db/src/seed/owner.ts`). Committed template: `.env.init.example`.
 - Postgres 5544 verified clear (existing pg containers on 5436/5437).
+- `UPLOAD_DIR` (`L2-INF-18`) rides the same root-`.env` load path as `DATABASE_URL`/`POSTGRES_*` — no separate wiring needed. Owned and documented in detail by the `courses` domain (`docs/notes/courses.md`, `L2-COURSE-10`); listed here only because it's a runtime env var alongside the others in this file's scope.
 
 ## Ports
 - App: local 3070 / docker host 3071 → container 3070.

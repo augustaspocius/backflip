@@ -4,7 +4,7 @@
 > Style: terse. One fact per line.
 
 > **Implements L1:** `L1-ARCH-03`, `L1-ARCH-07`, `L1-ARCH-08`
-> **Depends on L2:** `db` (course tables), `school` (membership, `requireTeacher`)
+> **Depends on L2:** `db` (course tables), `school` (membership, `requireTeacher`), `infra` (`UPLOAD_DIR`, `L2-INF-18`)
 
 ## Owns
 Course authoring and enrolment: courses, decks, cards, who is enrolled in what, and the markdown rendering of a card's content. Not the study/review flow — that is a later domain in this plan.
@@ -23,6 +23,7 @@ Course authoring and enrolment: courses, decks, cards, who is enrolled in what, 
 - `L2-COURSE-07` — Card `front`/`back` are markdown, rendered by `@/app/learn/_components/markdown` (`<Markdown source={string} />`, `react-markdown` + `remark-gfm`). Raw HTML is not rendered — `react-markdown` does not interpret embedded HTML unless `rehype-raw` is added, so a pasted `<script>` renders as literal text. Adding `rehype-raw` later requires pairing it with a sanitizer (e.g. `rehype-sanitize`), not adding it alone.
 - `L2-COURSE-08` — Enrolment: teacher-driven only, `apps/web/app/learn/courses/[courseId]/students/_actions.ts`. `enrollStudent(prev, formData)` re-verifies, server-side, that the course belongs to `requireTeacher()`'s school **and** that the target user is a `school_member` with role `student` in that same school — neither the course id nor the user id from the form is trusted on its own. This is the concrete enforcement `L2-DB-44` hazard 2 requires, since `enrollment` carries no `schoolId` of its own to be checked by a foreign key. Re-enrolling is a no-op (`onConflictDoNothing` on the `(courseId, userId)` unique index), not an error. `unenrollStudent(courseId, userId)` removes only the `enrollment` row and leaves the student's `card_state` rows (a plan 3 table) untouched, so re-enrolling resumes a schedule rather than resetting it.
 - `L2-COURSE-09` — A `draft` course is invisible to students; publishing (`setCourseStatus`) activates existing enrolments. Enrolment and publication are independent operations — a teacher can build a course and attach students to it before it is published.
+- `L2-COURSE-10` — Card images: server action `uploadCardImage` (teacher-only, ≤2 MB, PNG/JPEG/GIF/WebP — **SVG refused**, it can carry script) writes to `UPLOAD_DIR` (default `./shared/uploads`, the deploy's persistent dir per `L2-DEVOPS-01`). Stored names are generated UUIDs, never the uploaded name, which closes traversal and collisions at once. `GET /api/learn/uploads/[name]` serves them, gated on a session — a binary endpoint, not a data layer, so `L1-ARCH-03` holds. Images are referenced from card markdown as ordinary `![](…)` links.
 
 ## Invariants
 - Every route and action under `apps/web/app/learn/courses/**` calls `requireTeacher()` server-side (`L2-SCHOOL-05`); hidden nav/buttons are never the only gate.
@@ -35,6 +36,7 @@ Course authoring and enrolment: courses, decks, cards, who is enrolled in what, 
 ## Acceptance
 - Manual walkthrough (`docs/notes/courses.md`): invite a second person as a student, enrol them from a course's Students page, confirm they move from the candidate dropdown into the roster, and confirm a duplicate enrolment attempt is a no-op (no error, no duplicate row).
 - Cross-school isolation for `enrollStudent`/`unenrollStudent` (a course or a student belonging to a different school) is asserted by the code shape here but is exercised end-to-end by a later task in this plan, with a real second school and second teacher — see the test-coverage gap in `docs/notes/courses.md`.
+- The upload traversal defence (`L2-COURSE-10`) is proven by unit test (`apps/web/app/learn/_lib/uploads.test.ts`), not a running dev server — this environment has no Docker/Postgres to bring one up. See `docs/notes/courses.md` for what a manual `curl` check would additionally confirm.
 
 ## Constrained L3
 - `/docs/notes/courses.md`
