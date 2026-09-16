@@ -247,6 +247,55 @@ test.describe("cross-school isolation", () => {
   })
 })
 
+// The existing cross-school isolation tests above cover a different school
+// entirely. They do not cover the narrower case a plain school-scoped WHERE
+// still lets through: a deck id from a DIFFERENT COURSE in the SAME school,
+// opened under the wrong course's URL segment. Both courses below belong to
+// OWNER's own school, so the school check alone would pass either way — only
+// `eq(decks.courseId, courseId)` on the deck page distinguishes them.
+test("a deck from another course in the SAME school 404s under the wrong course's URL", async ({
+  page,
+}) => {
+  await login(page, OWNER.email, OWNER.password)
+  await expect(page).toHaveURL("/backflip")
+
+  async function createCourseWithDeck(label: string) {
+    const courseTitle = `Course ${label} ${Date.now()}`
+    await page.goto("/learn/courses")
+    await page.getByLabel("Title").fill(courseTitle)
+    await page.getByRole("button", { name: "Create course" }).click()
+    await page.getByRole("link", { name: courseTitle }).click()
+    await expect(page).toHaveURL(/\/learn\/courses\/[^/]+$/)
+    const courseId = new URL(page.url()).pathname.split("/").pop()!
+
+    const deckTitle = `Deck ${label} ${Date.now()}`
+    await page.getByPlaceholder("New deck title").fill(deckTitle)
+    await page.getByRole("button", { name: "Add deck" }).click()
+    await page.getByRole("link", { name: deckTitle }).click()
+    await expect(page).toHaveURL(/\/decks\/[^/]+$/)
+    const deckId = new URL(page.url()).pathname.split("/").pop()!
+
+    return { courseId, deckId }
+  }
+
+  const courseA = await createCourseWithDeck("A")
+  const courseB = await createCourseWithDeck("B")
+
+  await test.step("deck B renders fine under its own course's URL", async () => {
+    const response = await page.goto(
+      `/learn/courses/${courseB.courseId}/decks/${courseB.deckId}`
+    )
+    expect(response?.status()).toBe(200)
+  })
+
+  await test.step("the same deck id under course A's URL 404s instead of rendering", async () => {
+    const response = await page.goto(
+      `/learn/courses/${courseA.courseId}/decks/${courseB.deckId}`
+    )
+    expect(response?.status()).toBe(404)
+  })
+})
+
 test("enrollStudent rejects a hostile client posting a foreign student id, and writes nothing", async ({
   page,
 }) => {
@@ -285,13 +334,6 @@ test("enrollStudent rejects a hostile client posting a foreign student id, and w
   const courseId = new URL(page.url()).pathname.split("/").pop()!
 
   await page.goto(`/learn/courses/${courseId}/students`)
-  // Let the client bundle finish loading and React hydrate before touching
-  // the DOM by hand below — injecting into a not-yet-hydrated tree races
-  // React's own hydration pass, which reconciles away anything it didn't
-  // render itself (a real hydration-mismatch error, reproduced while writing
-  // this test). `networkidle` is a real signal tied to the browser actually
-  // finishing loading/executing the route's JS, not a blind sleep.
-  await page.waitForLoadState("networkidle")
 
   // The dropdown never offers a foreign student — this simulates a client
   // that doesn't respect that and posts one anyway, exactly the way a
@@ -299,7 +341,7 @@ test("enrollStudent rejects a hostile client posting a foreign student id, and w
   // name="userId">` is a plain uncontrolled element with no client-side
   // validation, so this reaches the real server action over the real route,
   // with nothing about the request marked as synthetic.
-  await page.evaluate((fakeId) => {
+  function injectForeignOption(fakeId: string) {
     const select = document.querySelector(
       'select[name="userId"]'
     ) as HTMLSelectElement
@@ -307,14 +349,25 @@ test("enrollStudent rejects a hostile client posting a foreign student id, and w
     option.value = fakeId
     option.textContent = "Injected (not a real candidate)"
     select.appendChild(option)
-  }, foreignStudentId)
+  }
 
-  // Confirm the injected option actually survived (rather than letting a
-  // hydration race fail obscurely at `selectOption` below).
   const injectedOption = page.locator(
     `select[name="userId"] option[value="${foreignStudentId}"]`
   )
-  await expect(injectedOption).toHaveCount(1)
+
+  // Injecting into a not-yet-hydrated tree races React's own hydration pass,
+  // which reconciles away anything it didn't render itself (a real
+  // hydration-mismatch error, reproduced while writing this test). A
+  // `networkidle` wait before injecting is a blind, untargeted proxy for
+  // "hydration is done" — it can still leave a slower machine mid-hydration
+  // and flake. Retrying the injection itself inside `toPass()` is
+  // deterministic regardless of machine speed: if hydration wipes the
+  // injected option out between the injection and the assertion, this loop
+  // just injects it again, rather than the test failing once and giving up.
+  await expect(async () => {
+    await page.evaluate(injectForeignOption, foreignStudentId)
+    await expect(injectedOption).toHaveCount(1)
+  }).toPass()
 
   await page.locator('select[name="userId"]').selectOption(foreignStudentId)
   await page.getByRole("button", { name: "Enrol" }).click()
