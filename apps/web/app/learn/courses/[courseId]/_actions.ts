@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { cards, courses, db, decks } from "@workspace/db"
-import { and, eq } from "drizzle-orm"
+import { and, eq, inArray } from "drizzle-orm"
 
 import { requireTeacher } from "@/app/_lib/school"
 import { firstError } from "@/app/_lib/validation"
@@ -15,18 +15,16 @@ import type { ActionState } from "../_actions"
  * matching the teacher's school — an id posted from the client is only ever a
  * lookup key, never evidence of access (`L2-SCHOOL-06`).
  *
+ * Every UPDATE/DELETE here proves ownership inside its own WHERE clause (a
+ * subquery scoped to the teacher's school), the same no-window-between-
+ * check-and-write shape `courses/_actions.ts` uses — never a preceding
+ * SELECT followed by an unscoped write. INSERTs (`createDeck`, `createCard`)
+ * are the one exception, and necessarily so: there is no existing row for an
+ * INSERT to scope itself by, so checking the parent (course/deck) belongs to
+ * the teacher's school beforehand is the only option.
+ *
  * @spec L2-COURSE-06
  */
-
-/** The deck's course id when this teacher may touch it, else null. */
-async function courseIdForDeck(deckId: string, schoolId: string) {
-  const [row] = await db
-    .select({ courseId: decks.courseId })
-    .from(decks)
-    .innerJoin(courses, eq(courses.id, decks.courseId))
-    .where(and(eq(decks.id, deckId), eq(courses.schoolId, schoolId)))
-  return row?.courseId ?? null
-}
 
 export async function createDeck(
   _prev: ActionState,
@@ -38,6 +36,9 @@ export async function createDeck(
   const parsed = deckSchema.safeParse({ title: String(formData.get("title") ?? "") })
   if (!parsed.success) return { ok: false, message: firstError(parsed.error) }
 
+  // INSERT has no existing row to scope itself by, so the parent course's
+  // school is checked beforehand — the one place a preceding check is
+  // unavoidable rather than a shortcut around the self-scoping rule below.
   const [course] = await db
     .select({ id: courses.id })
     .from(courses)
@@ -52,12 +53,25 @@ export async function createDeck(
 
 export async function deleteDeck(deckId: string): Promise<ActionState> {
   const teacher = await requireTeacher()
-  const courseId = await courseIdForDeck(deckId, teacher.schoolId)
-  if (!courseId) return { ok: false, message: "Deck not found." }
 
-  await db.delete(decks).where(eq(decks.id, deckId))
+  const deleted = await db
+    .delete(decks)
+    .where(
+      and(
+        eq(decks.id, deckId),
+        inArray(
+          decks.courseId,
+          db
+            .select({ id: courses.id })
+            .from(courses)
+            .where(eq(courses.schoolId, teacher.schoolId))
+        )
+      )
+    )
+    .returning({ courseId: decks.courseId })
+  if (deleted.length === 0) return { ok: false, message: "Deck not found." }
 
-  revalidatePath(`/learn/courses/${courseId}`)
+  revalidatePath(`/learn/courses/${deleted[0]!.courseId}`)
   return { ok: true, message: "Deck deleted." }
 }
 
@@ -74,8 +88,15 @@ export async function createCard(
   })
   if (!parsed.success) return { ok: false, message: firstError(parsed.error) }
 
-  const courseId = await courseIdForDeck(deckId, teacher.schoolId)
-  if (!courseId) return { ok: false, message: "Deck not found." }
+  // INSERT has no existing row to scope itself by, so the parent deck's
+  // course/school is checked beforehand — the one place a preceding check is
+  // unavoidable rather than a shortcut around the self-scoping rule below.
+  const [deck] = await db
+    .select({ courseId: decks.courseId })
+    .from(decks)
+    .innerJoin(courses, eq(courses.id, decks.courseId))
+    .where(and(eq(decks.id, deckId), eq(courses.schoolId, teacher.schoolId)))
+  if (!deck) return { ok: false, message: "Deck not found." }
 
   await db.insert(cards).values({
     deckId,
@@ -83,7 +104,7 @@ export async function createCard(
     back: parsed.data.back,
   })
 
-  revalidatePath(`/learn/courses/${courseId}/decks/${deckId}`)
+  revalidatePath(`/learn/courses/${deck.courseId}/decks/${deckId}`)
   return { ok: true, message: "Card added." }
 }
 
@@ -100,36 +121,68 @@ export async function updateCard(
   })
   if (!parsed.success) return { ok: false, message: firstError(parsed.error) }
 
-  const [owned] = await db
-    .select({ deckId: cards.deckId, courseId: decks.courseId })
-    .from(cards)
-    .innerJoin(decks, eq(decks.id, cards.deckId))
-    .innerJoin(courses, eq(courses.id, decks.courseId))
-    .where(and(eq(cards.id, id), eq(courses.schoolId, teacher.schoolId)))
-  if (!owned) return { ok: false, message: "Card not found." }
-
-  await db
+  const updated = await db
     .update(cards)
     .set({ front: parsed.data.front, back: parsed.data.back, updatedAt: new Date() })
-    .where(eq(cards.id, id))
+    .where(
+      and(
+        eq(cards.id, id),
+        inArray(
+          cards.deckId,
+          db
+            .select({ id: decks.id })
+            .from(decks)
+            .innerJoin(courses, eq(courses.id, decks.courseId))
+            .where(eq(courses.schoolId, teacher.schoolId))
+        )
+      )
+    )
+    .returning({ deckId: cards.deckId })
+  if (updated.length === 0) return { ok: false, message: "Card not found." }
 
-  revalidatePath(`/learn/courses/${owned.courseId}/decks/${owned.deckId}`)
+  // Path revalidation is not a security operation, so resolving the course
+  // id with a plain follow-up lookup (after the scoped write succeeded) is
+  // fine — it never gates anything.
+  const [deck] = await db
+    .select({ courseId: decks.courseId })
+    .from(decks)
+    .where(eq(decks.id, updated[0]!.deckId))
+  if (deck) {
+    revalidatePath(`/learn/courses/${deck.courseId}/decks/${updated[0]!.deckId}`)
+  }
   return { ok: true, message: "Saved." }
 }
 
 export async function deleteCard(cardId: string): Promise<ActionState> {
   const teacher = await requireTeacher()
 
-  const [owned] = await db
-    .select({ deckId: cards.deckId, courseId: decks.courseId })
-    .from(cards)
-    .innerJoin(decks, eq(decks.id, cards.deckId))
-    .innerJoin(courses, eq(courses.id, decks.courseId))
-    .where(and(eq(cards.id, cardId), eq(courses.schoolId, teacher.schoolId)))
-  if (!owned) return { ok: false, message: "Card not found." }
+  const deleted = await db
+    .delete(cards)
+    .where(
+      and(
+        eq(cards.id, cardId),
+        inArray(
+          cards.deckId,
+          db
+            .select({ id: decks.id })
+            .from(decks)
+            .innerJoin(courses, eq(courses.id, decks.courseId))
+            .where(eq(courses.schoolId, teacher.schoolId))
+        )
+      )
+    )
+    .returning({ deckId: cards.deckId })
+  if (deleted.length === 0) return { ok: false, message: "Card not found." }
 
-  await db.delete(cards).where(eq(cards.id, cardId))
-
-  revalidatePath(`/learn/courses/${owned.courseId}/decks/${owned.deckId}`)
+  // Path revalidation is not a security operation, so resolving the course
+  // id with a plain follow-up lookup (after the scoped delete succeeded) is
+  // fine — it never gates anything.
+  const [deck] = await db
+    .select({ courseId: decks.courseId })
+    .from(decks)
+    .where(eq(decks.id, deleted[0]!.deckId))
+  if (deck) {
+    revalidatePath(`/learn/courses/${deck.courseId}/decks/${deleted[0]!.deckId}`)
+  }
   return { ok: true, message: "Card deleted." }
 }
