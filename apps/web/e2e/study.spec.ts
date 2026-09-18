@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test"
-import { and, eq } from "drizzle-orm"
+import { and, eq, inArray } from "drizzle-orm"
 import { drizzle } from "drizzle-orm/node-postgres"
 import pg from "pg"
 
@@ -100,7 +100,8 @@ test("a student studies a course end to end and the teacher sees it", async ({
 }) => {
   const title = `Review Loop ${Date.now()}`
   const deckTitle = "Energy"
-  const front = "What is ATP?"
+  // Markdown source: the study screen must render it, not show asterisks.
+  const front = "What is **ATP**?"
   const back = "Adenosine triphosphate"
   let courseId = ""
 
@@ -149,7 +150,8 @@ test("a student studies a course end to end and the teacher sees it", async ({
   await test.step("STUDENT studies: reveal, rate Good, queue empties", async () => {
     await row.getByRole("link", { name: title }).click()
     await expect(page).toHaveURL(`/learn/study/${courseId}`)
-    await expect(page.getByText(front)).toBeVisible()
+    await expect(page.locator("strong", { hasText: "ATP" })).toBeVisible()
+    await expect(page.getByText(front)).toHaveCount(0)
 
     await reveal(page, back)
     await page.getByRole("button", { name: /^Good/ }).click()
@@ -230,6 +232,106 @@ test("a student cannot reach the teacher's course list", async ({ page }) => {
   await login(page, STUDENT.email, STUDENT.password)
   await page.goto("/learn/courses")
   await expect(page).toHaveURL("/learn")
+})
+
+test("the daily new-card cap holds back unseen cards until UTC midnight", async ({
+  page,
+}) => {
+  // One unseen card, plus 20 cards STUDENT was introduced to today (a
+  // `review_log` row with pre-answer state New). Their `card_state` rows are
+  // due in the future, so nothing reviewed is due: whatever the badge and
+  // queue show comes from the unseen card and the cap alone.
+  const title = `Daily Cap ${Date.now()}`
+  const studentId = await userIdOf(STUDENT.email)
+  const ownerId = await userIdOf(OWNER.email)
+  const [defaultSchool] = await db
+    .select({ id: schools.id })
+    .from(schools)
+    .where(eq(schools.slug, "default"))
+  const [course] = await db
+    .insert(courses)
+    .values({
+      schoolId: defaultSchool!.id,
+      ownerId,
+      title,
+      status: "published",
+    })
+    .returning({ id: courses.id })
+  const [deck] = await db
+    .insert(decks)
+    .values({ courseId: course!.id, title: "Cap deck" })
+    .returning({ id: decks.id })
+  await db
+    .insert(enrollments)
+    .values({ courseId: course!.id, userId: studentId })
+  await db
+    .insert(cards)
+    .values({ deckId: deck!.id, front: "Unseen front", back: "Unseen back" })
+
+  const now = new Date()
+  const introducedIds: string[] = []
+  for (let i = 0; i < 20; i++) {
+    const [card] = await db
+      .insert(cards)
+      .values({
+        deckId: deck!.id,
+        front: `Seen front ${i}`,
+        back: `Seen back ${i}`,
+        position: i + 1,
+      })
+      .returning({ id: cards.id })
+    introducedIds.push(card!.id)
+    await db.insert(cardStates).values({
+      userId: studentId,
+      cardId: card!.id,
+      due: new Date(now.getTime() + 3 * 86_400_000),
+      stability: 3,
+      difficulty: 5,
+      scheduledDays: 3,
+      reps: 1,
+      state: 2,
+      lastReviewAt: now,
+    })
+    await db.insert(reviewLogs).values({
+      userId: studentId,
+      cardId: card!.id,
+      rating: 3,
+      state: 0,
+      stability: 0,
+      difficulty: 0,
+      scheduledDays: 0,
+      reviewedAt: now,
+    })
+  }
+
+  await login(page, STUDENT.email, STUDENT.password)
+  const row = page.locator("li", { hasText: title })
+
+  await test.step("with 20 introduced today, the unseen card is held back", async () => {
+    await page.goto("/learn")
+    await expect(row).toContainText("Nothing due")
+
+    await page.goto(`/learn/study/${course!.id}`)
+    await expect(page.getByText("Nothing left to review.")).toBeVisible()
+    await expect(page.getByText("Unseen front")).toHaveCount(0)
+  })
+
+  await test.step("once those introductions are before UTC midnight, it is due", async () => {
+    const midnight = new Date(now)
+    midnight.setUTCHours(0, 0, 0, 0)
+    await db
+      .update(reviewLogs)
+      .set({ reviewedAt: new Date(midnight.getTime() - 60 * 60 * 1000) })
+      .where(
+        and(
+          eq(reviewLogs.userId, studentId),
+          inArray(reviewLogs.cardId, introducedIds)
+        )
+      )
+
+    await page.goto("/learn")
+    await expect(row).toContainText("1 due")
+  })
 })
 
 test.describe("seeded study fixtures", () => {
@@ -368,7 +470,7 @@ test.describe("seeded study fixtures", () => {
     outsiderCardId = outsiderCard!.id
   })
 
-  test("a draft course STUDENT is enrolled in is absent from /learn and 404s", async ({
+  test("a draft course STUDENT is enrolled in is absent from /learn and its study route redirects there", async ({
     page,
   }) => {
     await login(page, STUDENT.email, STUDENT.password)
@@ -383,8 +485,8 @@ test.describe("seeded study fixtures", () => {
       page.getByRole("link", { name: draft.title, exact: true })
     ).toHaveCount(0)
 
-    const response = await page.goto(`/learn/study/${draft.courseId}`)
-    expect(response?.status()).toBe(404)
+    await page.goto(`/learn/study/${draft.courseId}`)
+    await expect(page).toHaveURL("/learn")
     await expect(page.getByText(`${draft.title} front 1`)).toHaveCount(0)
   })
 

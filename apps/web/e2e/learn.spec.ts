@@ -74,7 +74,7 @@ test("a teacher sees the Courses link, unclicked", async ({ page }) => {
   await expect(page).toHaveURL("/backflip")
   await page.goto("/learn")
 
-  // `/learn/courses` doesn't exist yet (plan 2) — assert presence only.
+  // Presence only: the course list behind it is covered by authoring.spec.ts.
   await expect(page.getByRole("link", { name: "Courses" })).toBeVisible()
 })
 
