@@ -9,6 +9,8 @@
 - `apps/web/package.json` — `ts-fsrs` pinned at `5.4.2` (exact, no `^`). Satisfies `L2-SRS-09`.
 - `apps/web/app/_lib/srs/queue.ts` — the study queue. `QueueCard`, `interleave`, `NEW_CARDS_PER_DAY`, `startOfUtcDay`, `dueQueue`, `dueCount`. Satisfies `L2-SRS-04`.
 - `apps/web/app/_lib/srs/queue.test.ts` — unit suite for the pure parts (7 tests, see below). Satisfies `L2-SRS-04`.
+- `apps/web/app/_lib/srs/index.ts` — the barrel: `export * from "./schedule"` + `export * from "./queue"`. **SERVER ONLY** — it re-exports `queue.ts`, which imports `server-only`, so importing this barrel from a client component fails the build. A client component that only needs `Grade`/`GRADES`/etc. imports `./schedule` directly; one that needs `queue.ts`'s types for props imports `./queue` with `import type`. Everything server-side (actions, RSCs) imports `@/app/_lib/srs`.
+- `apps/web/app/learn/study/[courseId]/_actions.ts` — `answerCard(cardId, grade)`, the only write path for a review: validate input → prove enrolment/publication/same-school by join → one transaction (upsert `card_state`, insert `review_log`). Satisfies `L2-SRS-05`, `L2-SRS-06`.
 
 ## Why `elapsed_days` is derived, not stored
 `ts-fsrs`'s `Card` type still carries `elapsed_days` even though the library deprecated it and the scheduling algorithm doesn't read it. `MemoryState` has no field for it — `toFsrsCard` computes it from `due` − `lastReviewAt` (whole days, floor at 0, 0 when the card has never been reviewed) each time a `Card` is built for the library. Storing it would be a column that can silently drift from the fields that actually drive scheduling; deriving it means `card_state` only ever holds numbers the algorithm depends on.
@@ -37,6 +39,15 @@ The UTC-midnight boundary is a deliberate trade-off, not an oversight: there is 
 ## `dueCount`'s formula: reviewed-and-due, plus room for unseen
 `dueCount = (reviewed cards in this course with due <= now) + min(unseen cards in this course, remaining new-card allowance today)`. The first half is exactly the old "cards with a `card_state` row that's due" query. The second half exists because a `card_state` row is only created the first time a card is answered — a freshly enrolled student who has answered nothing has zero `card_state` rows, so without the unseen half every course would show "0 due" until the student's first review, which is wrong: a one-card course a student just enrolled in should read "1 due", not "nothing due". The `min(...)` is what keeps the badge honest against the same daily cap `dueQueue` enforces, rather than counting every unseen card regardless of the allowance.
 
+## `answerCard`: why the reachability join carries `schoolId` too
+Enrolment + publication (`enrollments.userId = member.userId`, `courses.status = "published"`) already proves a card is one this student may study — a single school deployment (`L2-SCHOOL-11`) means those two alone are sufficient today. `courses.schoolId = member.schoolId` is added anyway, defense in depth against the day a second school exists: without it, an enrolment row from a future cross-school data mixup would still pass. `member.schoolId` comes only from `requireMembership()`, never the client, so the extra clause costs nothing and closes a door before it exists.
+
+## `answerCard`: why `reviewedAt` is written explicitly, not left to `defaultNow()`
+`review_log.reviewedAt` has a `defaultNow()` in the schema (`packages/db/src/schema.ts`), but `answerCard` always passes it explicitly as the same `now` used for `schedule()` and the `due <=` / UTC-midnight comparisons in `queue.ts`. Two different clock reads (the insert's implicit `now()` vs. the action's own `new Date()`) could disagree by however long the transaction takes to reach the `INSERT`, and `remainingNewCardAllowance`'s UTC-midnight boundary check would then be comparing against a timestamp nobody chose. One `now`, read once per request, is what keeps the answer, the schedule, and the daily cap consistent.
+
+## `answerCard`: no scheduled job, by design
+Nothing recomputes a `card_state` row outside of `answerCard` itself — there is no cron, no queue worker, no background process anywhere in the app. This is a droplet constraint (`digitalocean-devops`: pm2 runs the Next.js server, nothing else) as much as a design choice: FSRS only needs to reschedule a card the moment it is answered, so the synchronous transaction inside the request is the whole implementation. A card with no `card_state` row is simply "new" until its first answer; nothing decays it in the background.
+
 ## How to run the suite
 ```
 corepack yarn workspace web test srs
@@ -47,4 +58,5 @@ The first runs just `schedule.test.ts`, the second just `queue.test.ts` (vitest'
 ## State
 - Scheduler done: `newCardState`, `schedule`, `GRADES`, all four `MemoryState`/`ReviewOutcome`/`Grade` types. 9/9 unit tests pass, no exact-value assertions needed loosening (see above).
 - Queue done: `interleave`, `startOfUtcDay`, `NEW_CARDS_PER_DAY`, `dueQueue`, `dueCount`. 7/7 unit tests pass (5 `interleave`, 2 `startOfUtcDay`); the SQL paths are server-only and covered by Playwright in a later task, not unit-tested here. Typecheck clean, full web suite (382 tests) green.
-- Not built yet, later tasks in this plan: the `answerCard` write path and the student/teacher routes that will be the callers of `dueQueue`/`dueCount`/`schedule`/`newCardState` outside test files.
+- Write path done: `answerCard` (`apps/web/app/learn/study/[courseId]/_actions.ts`) plus the `@/app/_lib/srs` barrel. No unit tests in this task by design — the brief's test coverage for this path is a hostile-client e2e in a later task. Full web suite still green (382 tests, unchanged count).
+- Not built yet, later tasks in this plan: the student/teacher routes (`/learn`, `/learn/study/[courseId]`, `/learn/courses/[courseId]/progress`) that will render the queue and call `answerCard` from a UI, and the hostile-client e2e for `answerCard` itself.
