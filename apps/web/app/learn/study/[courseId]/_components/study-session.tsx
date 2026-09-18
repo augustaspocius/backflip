@@ -1,15 +1,13 @@
 "use client"
 
-import { useEffect, useState, useTransition } from "react"
+import { useEffect, useState, useTransition, type ReactNode } from "react"
 import Link from "next/link"
 
 import { Button } from "@workspace/ui/components/button"
 
 // NOT from the `@/app/_lib/srs` barrel: that re-exports `queue.ts`, which
-// imports `server-only` and would fail this client build. Values come from
-// `schedule` (pure); the queue type is imported as a type, so it is erased.
+// imports `server-only` and would fail this client build. `schedule` is pure.
 import { GRADES, type Grade } from "@/app/_lib/srs/schedule"
-import type { QueueCard } from "@/app/_lib/srs/queue"
 import { ActionMessage } from "@/app/learn/_components/action-message"
 import type { ActionState } from "@/app/learn/courses/_actions"
 import { answerCard } from "../_actions"
@@ -26,7 +24,15 @@ import { answerCard } from "../_actions"
  * session advances to the next card either way, including when `answerCard`
  * itself throws (a dropped connection costs one answer, not the session).
  */
-export function StudySession({ queue }: { queue: QueueCard[] }) {
+/** One queued card, sides already rendered server-side (markdown → nodes). */
+export type StudyCard = {
+  cardId: string
+  isNew: boolean
+  front: ReactNode
+  back: ReactNode
+}
+
+export function StudySession({ queue }: { queue: StudyCard[] }) {
   const [index, setIndex] = useState(0)
   const [revealed, setRevealed] = useState(false)
   const [result, setResult] = useState<ActionState>(null)
@@ -58,7 +64,14 @@ export function StudySession({ queue }: { queue: QueueCard[] }) {
         setRevealed(true)
         return
       }
-      if (revealed && ["1", "2", "3", "4"].includes(e.key)) {
+      if (!revealed) return
+      // Once revealed, only 1-4 (or a click) rates. Without this, Space or
+      // Enter would activate whichever rating button happens to have focus.
+      if (e.key === " " || e.key === "Enter") {
+        e.preventDefault()
+        return
+      }
+      if (["1", "2", "3", "4"].includes(e.key)) {
         e.preventDefault()
         rate(Number(e.key) as Grade)
       }
@@ -87,13 +100,13 @@ export function StudySession({ queue }: { queue: QueueCard[] }) {
         {card.isNew && " · new"}
       </p>
 
-      <div className="min-h-32 rounded-lg border p-6 text-lg whitespace-pre-wrap">
+      <div className="min-h-32 rounded-lg border p-6 text-lg">
         {card.front}
       </div>
 
       {revealed ? (
         <>
-          <div className="min-h-32 rounded-lg border p-6 whitespace-pre-wrap">
+          <div className="min-h-32 rounded-lg border p-6">
             {card.back}
           </div>
           <div className="flex flex-wrap gap-2">

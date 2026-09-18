@@ -52,6 +52,15 @@ export function interleave(due: QueueCard[], fresh: QueueCard[]): QueueCard[] {
 }
 
 /**
+ * How many new cards may still be introduced today, given how many already
+ * were. Pure: the arithmetic half of the daily cap, testable without a
+ * database. Never negative, even past the cap.
+ */
+export function newCardAllowance(introducedToday: number): number {
+  return Math.max(0, NEW_CARDS_PER_DAY - introducedToday)
+}
+
+/**
  * Midnight UTC of the day `now` falls on. The daily new-card cap resets
  * here, not at local midnight — a student far from UTC sees the reset at an
  * odd local hour. Known trade-off, no per-user timezone in v1.
@@ -105,8 +114,7 @@ async function remainingNewCardAllowance(
         gte(reviewLogs.reviewedAt, startOfUtcDay(now))
       )
     )
-  const introducedToday = row?.n ?? 0
-  return Math.max(0, NEW_CARDS_PER_DAY - introducedToday)
+  return newCardAllowance(row?.n ?? 0)
 }
 
 /**

@@ -1,4 +1,10 @@
-import { createEmptyCard, fsrs, type Card, type Grade as FsrsGrade } from "ts-fsrs"
+import {
+  createEmptyCard,
+  fsrs,
+  type Card,
+  type Grade as FsrsGrade,
+  type State,
+} from "ts-fsrs"
 
 /**
  * Spaced repetition scheduling. The ONLY module in the app that imports
@@ -65,7 +71,9 @@ function toFsrsCard(state: MemoryState): Card {
     learning_steps: state.learningSteps,
     reps: state.reps,
     lapses: state.lapses,
-    state: state.state,
+    // Only the enum is cast: a whole-object cast would hide a newly
+    // required `Card` field behind a passing typecheck.
+    state: state.state as State,
     last_review: state.lastReviewAt ?? undefined,
     // Deprecated in ts-fsrs and unused by the algorithm, but still on the
     // type. Derived rather than stored, so the column count stays honest.
@@ -77,7 +85,7 @@ function toFsrsCard(state: MemoryState): Card {
           )
         )
       : 0,
-  } as Card
+  }
 }
 
 function fromFsrsCard(card: Card): MemoryState {
