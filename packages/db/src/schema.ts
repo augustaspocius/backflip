@@ -764,3 +764,82 @@ export const enrollments = pgTable(
     index("enrollment_user_idx").on(t.userId),
   ]
 )
+
+/**
+ * One student's memory state for one card. This is the table that makes a
+ * single authored deck serve thirty students on thirty schedules.
+ *
+ * Columns mirror the `ts-fsrs` `Card` shape exactly, `learningSteps`
+ * included — a dropped field corrupts the schedule the next time the row is
+ * fed back into the algorithm.
+ *
+ * `state` holds the ts-fsrs `State` enum as an int (New 0, Learning 1,
+ * Review 2, Relearning 3). Deliberately not a pg enum: these are the
+ * library's values, and a version that adds one must not need a migration.
+ *
+ * @spec L2-SRS-01
+ */
+export const cardStates = pgTable(
+  "card_state",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    cardId: text("cardId")
+      .notNull()
+      .references(() => cards.id, { onDelete: "cascade" }),
+    /** When this card is next due. The queue orders by it. */
+    due: timestamp("due", { mode: "date" }).notNull(),
+    stability: real("stability").notNull(),
+    difficulty: real("difficulty").notNull(),
+    scheduledDays: integer("scheduledDays").notNull(),
+    learningSteps: integer("learningSteps").notNull().default(0),
+    reps: integer("reps").notNull().default(0),
+    lapses: integer("lapses").notNull().default(0),
+    state: integer("state").notNull().default(0),
+    lastReviewAt: timestamp("lastReviewAt", { mode: "date" }),
+  },
+  (t) => [
+    // One state per person per card. A review is an update, never a new row.
+    uniqueIndex("card_state_user_card_idx").on(t.userId, t.cardId),
+    // THE query: "what is due for me now", ordered by due. Everything the
+    // study screen does goes down this index.
+    index("card_state_user_due_idx").on(t.userId, t.due),
+  ]
+)
+
+/**
+ * Append-only record of every answer. The only table that grows without
+ * bound, which is why it holds nothing but numbers and timestamps.
+ *
+ * It earns that growth by being what an FSRS parameter optimisation trains
+ * on later; without it, per-student tuning is impossible after the fact.
+ *
+ * @spec L2-SRS-02
+ */
+export const reviewLogs = pgTable(
+  "review_log",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    cardId: text("cardId")
+      .notNull()
+      .references(() => cards.id, { onDelete: "cascade" }),
+    /** ts-fsrs `Rating`: Again 1, Hard 2, Good 3, Easy 4. */
+    rating: integer("rating").notNull(),
+    /** The state the card was in *before* this answer. */
+    state: integer("state").notNull(),
+    stability: real("stability").notNull(),
+    difficulty: real("difficulty").notNull(),
+    scheduledDays: integer("scheduledDays").notNull(),
+    reviewedAt: timestamp("reviewedAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [index("review_log_user_reviewed_idx").on(t.userId, t.reviewedAt)]
+)
