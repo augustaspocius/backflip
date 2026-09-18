@@ -14,10 +14,10 @@ Tailored for AI-assisted development — non-technical people build on it via es
 
 ## Rendering strategy
 - Public-facing pages: mostly SSR.
-- Admin under `/backflip/*` route scope: driven by API endpoints (better UX with loaders).
+- Admin under `/rnl-admin/*` route scope: driven by API endpoints (better UX with loaders).
 
 ## Admin
-- Route scope: `/backflip/*`.
+- Route scope: `/rnl-admin/*`.
 - Auth: Google login.
 
 ## Goal

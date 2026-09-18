@@ -16,7 +16,7 @@ export type EmailChangedEmailProps = {
 export function EmailChangedEmail({
   name,
   newEmail,
-  appName = "Backflip",
+  appName = "Repeat and Learn",
 }: EmailChangedEmailProps) {
   const greetingName = name?.trim() || "there"
 

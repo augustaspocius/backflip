@@ -101,6 +101,19 @@ const nextConfig: NextConfig = {
     // between deploys (rsync-protected), so warm rebuilds skip most compilation.
     turbopackFileSystemCacheForDev: true,
     turbopackFileSystemCacheForBuild: true,
+    // Default server-action body limit is 1 MB, which is below the 2 MB card
+    // image cap `uploadCardImage` enforces (`L2-COURSE-10`) — without this, a
+    // ~1.5 MB PNG never reaches that check; Next rejects the multipart body
+    // first with its own unfriendly error. Raised to 3 MB, not 2: the limit
+    // covers the whole multipart body (field names + boundaries + the file),
+    // so a file at exactly the 2 MB app-level cap needs headroom above it to
+    // still be rejected by our check and not the framework's. This applies to
+    // every server action in the app, not just uploads — acceptable here since
+    // every other action in this app carries only small text fields.
+    // MUST stay above MAX_BYTES in `_upload-actions.ts` (2 MB) — if the two
+    // converge, the framework's limit fires first again and this comment's
+    // whole point is undone. Do not "tidy" them to the same number.
+    serverActions: { bodySizeLimit: "3mb" },
   },
   typescript: {
     // Droplet builds run on 1 vCPU; the type check adds ~60s there and the same

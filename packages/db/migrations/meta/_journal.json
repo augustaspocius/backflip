@@ -141,6 +141,34 @@
       "when": 1788648423635,
       "tag": "0019_seed_teal_preset",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1788648423636,
+      "tag": "0020_black_stature",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1788894898088,
+      "tag": "0021_crazy_plazm",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1789732859616,
+      "tag": "0022_purple_diamondback",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1789736875469,
+      "tag": "0023_nosy_paper_doll",
+      "breakpoints": true
     }
   ]
 }

@@ -14,11 +14,11 @@ import { OWNER } from "./env"
  */
 
 async function loginAsOwner(page: Page) {
-  await page.goto("/backflip/login")
+  await page.goto("/rnl-admin/login")
   await page.getByLabel("Email").fill(OWNER.email)
   await page.getByLabel("Password").fill(OWNER.password)
   await page.getByRole("button", { name: "Sign in" }).click()
-  await expect(page).toHaveURL("/backflip")
+  await expect(page).toHaveURL("/rnl-admin")
 }
 
 async function expectInsideRail(icon: Locator, rail: Locator) {
@@ -86,11 +86,11 @@ for (const theme of ["Rose Gold", "Aubergine"]) {
     page,
   }) => {
     await loginAsOwner(page)
-    await page.goto("/backflip/account")
+    await page.goto("/rnl-admin/account")
     await page.getByRole("button", { name: new RegExp(`^${theme}`) }).click()
     await expect(page.getByText("Saving…")).toHaveCount(0, { timeout: 10000 })
 
-    await page.goto("/backflip")
+    await page.goto("/rnl-admin")
     await expect(
       page.getByRole("heading", { name: /Welcome back/ })
     ).toBeVisible()

@@ -1,7 +1,7 @@
 ---
 name: dev-workflow
 description: >
-  How to work with the backflip project: package manager, running the dev
+  How to work with the Repeat and Learn project: package manager, running the dev
   server, build/lint/typecheck/format, adding shadcn components, and monorepo
   layout. Load WHENEVER you run, start, build, test, lint, or install anything
   in this repo, add a dependency or shadcn component, or need a project command.
@@ -11,7 +11,7 @@ description: >
 
 # dev-workflow
 
-How to operate the backflip monorepo. Terse. Exact commands.
+How to operate the Repeat and Learn monorepo. Terse. Exact commands.
 
 ## Working directory
 - All work stays in the project dir. No `/tmp` or other scratch/system dirs for logs, output, or intermediate files — use the project (e.g. `.next`, ignored paths) instead.

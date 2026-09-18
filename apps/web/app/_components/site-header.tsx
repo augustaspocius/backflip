@@ -14,7 +14,7 @@ function Wordmark({ className }: { className?: string }) {
       <span className="inline-flex size-[22px] items-center justify-center rounded-md border bg-card">
         <BrandIcon className="text-primary" />
       </span>
-      Backflip
+      Repeat and Learn
     </a>
   )
 }
@@ -35,7 +35,7 @@ export function SiteHeader() {
           <Button
             size="sm"
             className="bg-[var(--brand)] text-[var(--brand-foreground)] hover:bg-[var(--brand)]/90"
-            render={<a href="/backflip" />}
+            render={<a href="/rnl-admin" />}
           >
             Admin
           </Button>

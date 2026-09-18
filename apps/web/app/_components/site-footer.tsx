@@ -32,18 +32,18 @@ export function SiteFooter() {
               <path d="M6 8a7 7 0 1 0 12 0" />
             </svg>
           </span>
-          Backflip
+          Repeat and Learn
         </a>
         <nav
           aria-label="Footer"
           className="flex flex-wrap gap-5 text-sm text-muted-foreground"
         >
-          <a href="/backflip" className="hover:text-foreground">
+          <a href="/rnl-admin" className="hover:text-foreground">
             Admin
           </a>
         </nav>
         <p className="flex items-baseline gap-2 text-[0.8125rem] text-muted-foreground">
-          © {new Date().getFullYear()} Backflip
+          © {new Date().getFullYear()} Repeat and Learn
           <AppVersion />
         </p>
       </div>

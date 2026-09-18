@@ -14,11 +14,11 @@ import { OWNER } from "./env"
 const CAP = 1440
 
 async function loginAsOwner(page: Page) {
-  await page.goto("/backflip/login")
+  await page.goto("/rnl-admin/login")
   await page.getByLabel("Email").fill(OWNER.email)
   await page.getByLabel("Password").fill(OWNER.password)
   await page.getByRole("button", { name: "Sign in" }).click()
-  await expect(page).toHaveURL("/backflip")
+  await expect(page).toHaveURL("/rnl-admin")
 }
 
 /** The capped wrapper: the canvas's only child. */
@@ -51,7 +51,7 @@ test.describe("wide viewport", () => {
     expect(canvas.x + canvas.width).toBeCloseTo(1920, 0)
 
     // A master-detail page is capped the same way.
-    await page.goto("/backflip/settings")
+    await page.goto("/rnl-admin/settings")
     expect((await content(page).boundingBox())!.width).toBe(CAP)
   })
 })

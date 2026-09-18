@@ -1,4 +1,4 @@
-# Constitution (L1) — Backflip
+# Constitution (L1) — Repeat and Learn
 
 > L1 = invariants / why. Human-only changes. Cites nothing up. Governs L2 below.
 > Style: terse. One fact per line.
@@ -10,13 +10,13 @@ Tailored for AI-assisted dev — non-technical builders extend it via establishe
 
 ## Domain model
 - **Platform** — the shared foundation (stack, conventions, UI system, docs discipline).
-- **Admin** — operator surface under `/backflip/*`. Auth-gated.
+- **Admin** — operator surface under `/rnl-admin/*`. Auth-gated.
 - **Public** — end-user facing surface. Open.
 - **Admin user** — authenticates via Google. Holds a session.
 - **UI system** — shared component library + theme, consumed by all surfaces.
 
 ## Boundaries
-- `L1-ARCH-01` — Two surfaces: Public (open) and Admin (`/backflip/*`, gated). Distinct rendering strategies.
+- `L1-ARCH-01` — Two surfaces: Public (open) and Admin (`/rnl-admin/*`, gated). Distinct rendering strategies.
 - `L1-ARCH-02` — Public pages: mostly SSR.
 - `L1-ARCH-03` — Admin pages: server components reading data directly server-side; mutations go through server actions. API routes exist only for consumers outside the app (the MCP connector, public config endpoints), not as the admin's own data layer.
 - `L1-ARCH-04` — Admin scope owns its auth boundary. Unauthenticated → redirect to admin login.
@@ -27,7 +27,7 @@ Tailored for AI-assisted dev — non-technical builders extend it via establishe
 
 ## Constraints (non-negotiable)
 - `L1-CON-01` — Admin auth supports two methods: credentials (email + password) and Google login. Google sign-in is allowed only for emails already registered on the platform.
-- `L1-CON-02` — `/backflip/*` requires a valid session; only the admin login route is public within scope.
+- `L1-CON-02` — `/rnl-admin/*` requires a valid session; only the admin login route is public within scope.
 - `L1-CON-03` — Foundation ships baseline + guidelines; features stay generic/extensible, not project-specific.
 - `L1-CON-04` — Three-level doc system maintained with every code change (see project CLAUDE.md).
 - `L1-CON-05` — Credentials (email + password) login may be disabled per-deployment for Google-only sign-in. The toggle is honored only when Google is configured, so at least one sign-in method always remains. Refines `L1-CON-01` (both methods are still supported; a deployment may turn one off).

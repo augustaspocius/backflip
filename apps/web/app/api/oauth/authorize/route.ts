@@ -13,14 +13,14 @@ import {
 export const runtime = "nodejs"
 
 /** Consent lives inside the protected admin scope (`L2-MCP-14`). */
-const CONSENT_PATH = "/backflip/connect"
+const CONSENT_PATH = "/rnl-admin/connect"
 
 /**
  * GET /api/oauth/authorize — the authorization endpoint (RFC 6749 §3.1).
  *
  * This route only validates and routes; it never authenticates the user and
- * never mints anything. A valid request is handed to `/backflip/connect` with
- * its query string intact — that page sits behind the `/backflip` auth gate
+ * never mints anything. A valid request is handed to `/rnl-admin/connect` with
+ * its query string intact — that page sits behind the `/rnl-admin` auth gate
  * (`L2-AUTH-01`), so an anonymous visitor is bounced to login and returns here
  * automatically, and it re-validates before minting a code.
  *

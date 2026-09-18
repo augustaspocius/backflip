@@ -76,11 +76,11 @@ async function registerClient(
 }
 
 async function login(page: Page, account: Account): Promise<void> {
-  await page.goto("/backflip/login")
+  await page.goto("/rnl-admin/login")
   await page.getByLabel("Email").fill(account.email)
   await page.getByLabel("Password").fill(account.password)
   await page.getByRole("button", { name: "Sign in" }).click()
-  await expect(page).toHaveURL("/backflip")
+  await expect(page).toHaveURL("/rnl-admin")
 }
 
 /**
@@ -105,7 +105,7 @@ function captureRedirect(page: Page): Promise<URL> {
 }
 
 /**
- * Drive `/api/oauth/authorize` -> `/backflip/connect` -> Allow, and capture
+ * Drive `/api/oauth/authorize` -> `/rnl-admin/connect` -> Allow, and capture
  * the redirect back to `REDIRECT_URI` (see `captureRedirect`). Assumes the
  * page is already authenticated — callers that need to exercise the
  * logged-out path drive the navigation themselves (see the regression test
@@ -136,7 +136,7 @@ async function authorizeAndApprove(
   const captured = captureRedirect(page)
 
   await page.goto(`/api/oauth/authorize?${params.toString()}`)
-  await expect(page).toHaveURL(/\/backflip\/connect\?/)
+  await expect(page).toHaveURL(/\/rnl-admin\/connect\?/)
 
   if (opts.onConsentScreen) await opts.onConsentScreen()
 
@@ -277,7 +277,7 @@ async function mcpCall(
 }
 
 /** Directly bumps `tokenVersion`, exactly what `changePassword` does
- *  (`app/backflip/(protected)/account/_actions.ts`) — the harness-sanctioned
+ *  (`app/rnl-admin/(protected)/account/_actions.ts`) — the harness-sanctioned
  *  stand-in for driving the password-change UI, so this test doesn't mutate
  *  the shared `OWNER` fixture's password out from under other spec files. */
 async function bumpTokenVersion(email: string): Promise<void> {
@@ -314,12 +314,12 @@ async function setDcrMode(mode: "off" | "allowlist" | "open"): Promise<void> {
   }
 }
 
-/** Selects the "MCP Connectors" row in `/backflip/settings`'s master list,
+/** Selects the "MCP Connectors" row in `/rnl-admin/settings`'s master list,
  *  landing on the `ConnectorsIntegration` detail pane. Caller must already be
  *  authenticated as an owner (`settings` capability) — a teammate never sees
  *  this page at all. */
 async function openConnectorsTab(page: Page): Promise<void> {
-  await page.goto("/backflip/settings")
+  await page.goto("/rnl-admin/settings")
   await page.getByRole("button", { name: "MCP Connectors" }).click()
 }
 
@@ -734,14 +734,14 @@ test.describe("Claude MCP connector", () => {
 
     await page.goto(`/api/oauth/authorize?${params.toString()}`)
 
-    // The `/backflip` proxy gate must carry the FULL authorize query string in
+    // The `/rnl-admin` proxy gate must carry the FULL authorize query string in
     // `from`, not just the pathname, or the post-login redirect lands on a
-    // bare `/backflip/connect` with nothing to render. This is the assertion
+    // bare `/rnl-admin/connect` with nothing to render. This is the assertion
     // that catches the regression: before the fix, `from` was just
-    // `/backflip/connect` (no `?...`), so none of these `contain`s would hold.
-    await expect(page).toHaveURL(/\/backflip\/login\?from=/)
+    // `/rnl-admin/connect` (no `?...`), so none of these `contain`s would hold.
+    await expect(page).toHaveURL(/\/rnl-admin\/login\?from=/)
     const fromParam = new URL(page.url()).searchParams.get("from") ?? ""
-    expect(fromParam.startsWith("/backflip/connect?")).toBe(true)
+    expect(fromParam.startsWith("/rnl-admin/connect?")).toBe(true)
     expect(fromParam).toContain(`client_id=${clientId}`)
     expect(fromParam).toContain(`code_challenge=${challenge}`)
 
@@ -752,9 +752,9 @@ test.describe("Claude MCP connector", () => {
     await page.getByRole("button", { name: "Sign in" }).click()
 
     // Lands on the consent screen WITH the request intact — not the fatal
-    // "Missing client_id" error card `/backflip/connect` renders with no
-    // params (see `ErrorCard` in `app/backflip/(protected)/connect/page.tsx`).
-    await expect(page).toHaveURL(/\/backflip\/connect\?/)
+    // "Missing client_id" error card `/rnl-admin/connect` renders with no
+    // params (see `ErrorCard` in `app/rnl-admin/(protected)/connect/page.tsx`).
+    await expect(page).toHaveURL(/\/rnl-admin\/connect\?/)
     await expect(page.getByText("E2E Logged-Out Connector")).toBeVisible()
     await expect(page.getByText("Your account")).toBeVisible()
     await expect(page.getByText("Can't authorize this connector")).toBeHidden()
@@ -945,7 +945,7 @@ test.describe("Claude MCP connector", () => {
       { maxRedirects: 0 }
     )
     expect(before.status()).toBe(307)
-    expect(before.headers()["location"] ?? "").toContain("/backflip/connect")
+    expect(before.headers()["location"] ?? "").toContain("/rnl-admin/connect")
 
     await removeAllowlistHostViaUI(page, "claude.ai")
     try {

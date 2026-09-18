@@ -11,11 +11,11 @@
 import { writeFileSync } from "node:fs"
 import { join } from "node:path"
 
-import { readDocsFromDisk } from "../app/backflip/(protected)/docs/_lib/read-docs"
+import { readDocsFromDisk } from "../app/rnl-admin/(protected)/docs/_lib/read-docs"
 
 const OUT = join(
   process.cwd(),
-  "app/backflip/(protected)/docs/_lib/docs-index.generated.json"
+  "app/rnl-admin/(protected)/docs/_lib/docs-index.generated.json"
 )
 
 const index = readDocsFromDisk()

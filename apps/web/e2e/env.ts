@@ -31,3 +31,53 @@ export const TEAMMATE = {
   name: "Tim Teammate",
   role: "teammate" as const,
 }
+
+/**
+ * A teacher in a SECOND school (`RIVAL_SCHOOL` below), used only to prove
+ * cross-school isolation in `authoring.spec.ts`: OWNER (default school) must
+ * never reach a course OUTSIDER owns, and vice versa. Platform role
+ * `teammate` — this account's product role lives in `school_member`, not
+ * `user.role`.
+ */
+export const OUTSIDER = {
+  email: "outsider@e2e.test",
+  password: "e2e-Outsider-Pass-2026",
+  name: "Olivia Outsider",
+  role: "teammate" as const,
+}
+
+/**
+ * A student in the default school, distinct from TEAMMATE (which plan 1's
+ * `learn.spec.ts` deliberately keeps membership-free as the "signed-in
+ * non-member" fixture — see `global-setup.ts`). Enrolled by OWNER in the
+ * authoring happy path.
+ */
+export const STUDENT = {
+  email: "student@e2e.test",
+  password: "e2e-Student-Pass-2026",
+  name: "Sam Student",
+  role: "teammate" as const,
+}
+
+/** Second school, seeded alongside the migration-seeded `default` one, so
+ *  the suite can prove a course is unreachable across school boundaries. */
+export const RIVAL_SCHOOL = {
+  name: "Rival School",
+  slug: "rival",
+}
+
+/**
+ * A student in `RIVAL_SCHOOL`, distinct from `OUTSIDER` (which is a teacher
+ * there). `enrollStudent`'s own cross-school check has two independent legs —
+ * "does this course belong to my school" and "is this user a student in my
+ * school" — and `OUTSIDER`'s id fails both at once (wrong school AND not a
+ * student), so it can't isolate which leg a test is actually exercising.
+ * This fixture fails only the school leg, which is what
+ * `authoring.spec.ts`'s hostile-enrolment test needs to pin down.
+ */
+export const RIVAL_STUDENT = {
+  email: "rival-student@e2e.test",
+  password: "e2e-RivalStudent-Pass-2026",
+  name: "Rita Rival",
+  role: "teammate" as const,
+}

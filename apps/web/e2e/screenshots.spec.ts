@@ -26,11 +26,11 @@ function shot(page: Page, name: string) {
 }
 
 async function loginAsOwner(page: Page) {
-  await page.goto("/backflip/login")
+  await page.goto("/rnl-admin/login")
   await page.getByLabel("Email").fill(OWNER.email)
   await page.getByLabel("Password").fill(OWNER.password)
   await page.getByRole("button", { name: "Sign in" }).click()
-  await expect(page).toHaveURL("/backflip")
+  await expect(page).toHaveURL("/rnl-admin")
 }
 
 test("public homepage", async ({ page }) => {
@@ -51,31 +51,31 @@ test("admin home page", async ({ page }) => {
 
 test("admin integrations page", async ({ page }) => {
   await loginAsOwner(page)
-  await page.goto("/backflip/settings")
-  await expect(page).toHaveURL("/backflip/settings")
+  await page.goto("/rnl-admin/settings")
+  await expect(page).toHaveURL("/rnl-admin/settings")
 
   await shot(page, "admin-integrations")
 })
 
 test("admin members page", async ({ page }) => {
   await loginAsOwner(page)
-  await page.goto("/backflip/users")
-  await expect(page).toHaveURL("/backflip/users")
+  await page.goto("/rnl-admin/users")
+  await expect(page).toHaveURL("/rnl-admin/users")
 
   await shot(page, "admin-users")
 })
 
 test("admin account page", async ({ page }) => {
   await loginAsOwner(page)
-  await page.goto("/backflip/account")
-  await expect(page).toHaveURL("/backflip/account")
+  await page.goto("/rnl-admin/account")
+  await expect(page).toHaveURL("/rnl-admin/account")
 
   await shot(page, "admin-account")
 })
 
 test("admin docs page", async ({ page }) => {
   await loginAsOwner(page)
-  await page.goto("/backflip/docs")
+  await page.goto("/rnl-admin/docs")
   await expect(page.getByRole("heading", { name: "Docs" })).toBeVisible()
 
   await shot(page, "admin-docs")

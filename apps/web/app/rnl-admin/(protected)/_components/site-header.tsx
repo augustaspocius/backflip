@@ -1,0 +1,62 @@
+"use client"
+
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+
+import { SidebarTrigger } from "@workspace/ui/components/sidebar"
+
+import { ThemeToggle } from "@/app/_components/theme-toggle"
+import { crumbsFor } from "../../_lib/crumbs"
+import { HeaderSearch } from "./header-search"
+
+export function SiteHeader() {
+  const pathname = usePathname()
+  const trail = crumbsFor(pathname)
+
+  return (
+    // `data-slot` is the hook the chrome-theme CSS paints through — it repoints
+    // the base tokens inside this subtree, so children keep using plain
+    // `text-muted-foreground` / `bg-border` and still follow the theme
+    // (`L2-UI-25`).
+    <header
+      data-slot="site-header"
+      className="flex h-(--header-height) shrink-0 items-center gap-2 border-b"
+    >
+      <div className="flex w-full items-center gap-2 px-4 lg:px-5">
+        <SidebarTrigger className="-ml-1" />
+        <span aria-hidden className="mx-1 h-4 w-px shrink-0 bg-border" />
+        <nav className="flex min-w-0 items-center gap-1.5 truncate text-[13px]">
+          {trail.map((c, i) => {
+            const last = i === trail.length - 1
+            return (
+              <span key={c} className="flex items-center gap-1.5">
+                <span
+                  className={last ? "font-medium" : "text-muted-foreground"}
+                >
+                  {c}
+                </span>
+                {!last ? (
+                  <span className="text-muted-foreground/50">/</span>
+                ) : null}
+              </span>
+            )
+          })}
+        </nav>
+
+        <div className="ml-auto flex min-w-0 shrink items-center gap-3">
+          <HeaderSearch />
+          <Link
+            href="/rnl-admin/docs"
+            className="hidden text-[13px] text-muted-foreground hover:text-foreground sm:inline"
+          >
+            Docs
+          </Link>
+          <ThemeToggle
+            variant="ghost"
+            className="size-7 text-muted-foreground hover:text-foreground"
+          />
+        </div>
+      </div>
+    </header>
+  )
+}

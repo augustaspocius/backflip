@@ -5,7 +5,7 @@ import { SiteFooter } from "./_components/site-footer"
 import { SiteHeader } from "./_components/site-header"
 
 export const metadata: Metadata = {
-  title: "Backflip — a batteries-included platform foundation",
+  title: "Repeat and Learn — a batteries-included platform foundation",
   description:
     "Clone it and start building features, not boilerplate. Auth, admin dashboard, Postgres + Drizzle, a shadcn UI system, and AI wiring, ready on day one.",
 }

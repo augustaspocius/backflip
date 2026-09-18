@@ -3,20 +3,36 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 
 import bcrypt from "bcryptjs"
-import { sql } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 import { drizzle } from "drizzle-orm/node-postgres"
 import { migrate } from "drizzle-orm/node-postgres/migrator"
 import pg from "pg"
 
-import { users } from "@workspace/db/schema"
+import {
+  courses,
+  decks,
+  schoolMembers,
+  schools,
+  users,
+} from "@workspace/db/schema"
 import {
   ADMIN_DATABASE_URL,
   BASE_URL,
+  OUTSIDER,
   OWNER,
+  RIVAL_SCHOOL,
+  RIVAL_STUDENT,
+  STUDENT,
   TEAMMATE,
   TEST_DATABASE_URL,
   TEST_DB_NAME,
 } from "./env"
+
+/** Title of the course seeded for OUTSIDER in `RIVAL_SCHOOL`. Exported so
+ *  `authoring.spec.ts` can assert on it without duplicating the string, while
+ *  still resolving the actual id by query rather than guessing it. */
+export const OUTSIDER_COURSE_TITLE = "Outsider's Astronomy"
+export const OUTSIDER_DECK_TITLE = "Outsider's Comets"
 
 // @spec L2-TEST-03, L2-TEST-04
 
@@ -41,24 +57,138 @@ async function ensureDatabase() {
   }
 }
 
-/** Migrate, then reset auth state and reseed the two fixture users. Config
- *  tables are left as the migrations seeded them. */
+/**
+ * Migrate, then reset auth + authoring state and reseed the fixture users,
+ * two schools, and a course that belongs to the second school alone.
+ *
+ * Config tables (and both `school` rows, once they exist) are left as-is —
+ * `school` is never truncated, so the migration-seeded `default` school and
+ * the `RIVAL_SCHOOL` row this function upserts both survive every run.
+ */
 async function migrateAndSeed() {
   const pool = new pg.Pool({ connectionString: TEST_DATABASE_URL })
   const db = drizzle(pool)
   try {
     await migrate(db, { migrationsFolder: MIGRATIONS_DIR })
 
+    // `user … cascade` already pulls in `school_member`, `enrollment` (both
+    // FK → user) and, less obviously, `course` (`course.ownerId` FK → user,
+    // `onDelete: "set null"` — irrelevant to TRUNCATE CASCADE, which follows
+    // the FK's existence, not its delete action) and transitively `deck`/
+    // `card`. Listed explicitly anyway, children before parents, so the
+    // intent — every authoring row is wiped and reseeded fresh each run — is
+    // readable without having to reason about which FK does it implicitly.
+    // `review_log`/`card_state` (FK → user and card) lead the list for the
+    // same reason: study progress is wiped with the cards it refers to.
     await db.execute(
-      sql`truncate table "user", "account", "session", "verificationToken" cascade`
+      sql`truncate table
+        "review_log", "card_state",
+        "enrollment", "card", "deck", "course", "school_member",
+        "user", "account", "session", "verificationToken"
+        cascade`
     )
 
-    for (const account of [OWNER, TEAMMATE]) {
+    // Second school, seeded idempotently (`onConflictDoNothing` on the
+    // unique slug) so a reused `backflip_test` database — the
+    // `reuseExistingServer` path — never errors re-inserting it. It is never
+    // truncated, matching the migration-seeded `default` school.
+    await db
+      .insert(schools)
+      .values({ name: RIVAL_SCHOOL.name, slug: RIVAL_SCHOOL.slug })
+      .onConflictDoNothing({ target: schools.slug })
+
+    for (const account of [OWNER, TEAMMATE, OUTSIDER, STUDENT, RIVAL_STUDENT]) {
       await db.insert(users).values({
         email: account.email,
         name: account.name,
         role: account.role,
         passwordHash: await bcrypt.hash(account.password, 10),
+      })
+    }
+
+    const [owner] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, OWNER.email))
+    const [outsider] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, OUTSIDER.email))
+    const [student] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, STUDENT.email))
+    const [rivalStudent] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, RIVAL_STUDENT.email))
+    // The migration-seeded school, resolved by its known slug rather than
+    // "whichever school row comes back first" — with a second school row now
+    // in play, an unordered `limit(1)` would be nondeterministic.
+    const [defaultSchool] = await db
+      .select({ id: schools.id })
+      .from(schools)
+      .where(eq(schools.slug, "default"))
+    const [rivalSchool] = await db
+      .select({ id: schools.id })
+      .from(schools)
+      .where(eq(schools.slug, RIVAL_SCHOOL.slug))
+
+    // OWNER: teacher in the default school (the "member" fixture).
+    // TEAMMATE: deliberately left with NO membership (plan 1's "signed-in
+    // non-member" fixture, `learn.spec.ts`) — do not add a row for it here.
+    // STUDENT: student in the default school, for the enrolment step of the
+    // authoring happy path.
+    // OUTSIDER: teacher in RIVAL_SCHOOL, the cross-school isolation fixture.
+    // RIVAL_STUDENT: student in RIVAL_SCHOOL — used to post a foreign
+    // student id at `enrollStudent` and prove its own cross-school check
+    // (`L2-DB-44` hazard 2), independent of `OUTSIDER` (which fails both the
+    // school AND the role leg of that check at once, so can't isolate one).
+    if (owner && defaultSchool) {
+      await db.insert(schoolMembers).values({
+        schoolId: defaultSchool.id,
+        userId: owner.id,
+        role: "teacher",
+      })
+    }
+    if (student && defaultSchool) {
+      await db.insert(schoolMembers).values({
+        schoolId: defaultSchool.id,
+        userId: student.id,
+        role: "student",
+      })
+    }
+    if (outsider && rivalSchool) {
+      await db.insert(schoolMembers).values({
+        schoolId: rivalSchool.id,
+        userId: outsider.id,
+        role: "teacher",
+      })
+
+      // A course owned by OUTSIDER, in RIVAL_SCHOOL, seeded directly rather
+      // than through the UI — the point is that it exists entirely outside
+      // OWNER's reach, not that OWNER could ever have created it.
+      const [outsiderCourse] = await db
+        .insert(courses)
+        .values({
+          schoolId: rivalSchool.id,
+          ownerId: outsider.id,
+          title: OUTSIDER_COURSE_TITLE,
+        })
+        .returning({ id: courses.id })
+
+      if (outsiderCourse) {
+        await db.insert(decks).values({
+          courseId: outsiderCourse.id,
+          title: OUTSIDER_DECK_TITLE,
+        })
+      }
+    }
+    if (rivalStudent && rivalSchool) {
+      await db.insert(schoolMembers).values({
+        schoolId: rivalSchool.id,
+        userId: rivalStudent.id,
+        role: "student",
       })
     }
   } finally {

@@ -212,7 +212,7 @@ export const connectorDcrMode = pgEnum("connector_dcr_mode", [
 
 /**
  * Connector (MCP) settings — single row, owner-managed under
- * `/backflip/settings`. Holds the redirect-host allowlist enforced for every
+ * `/rnl-admin/settings`. Holds the redirect-host allowlist enforced for every
  * OAuth client (manual or dynamic) and the dynamic-registration mode.
  *
  * `redirectHosts` seeds to Claude's two callback origins; an owner may add
@@ -597,5 +597,258 @@ export const chromePresets = pgTable(
     // The two query shapes: one user's presets, and the shipped set.
     index("chrome_preset_user_idx").on(t.userId),
     index("chrome_preset_type_idx").on(t.type),
+  ]
+)
+
+/**
+ * School roles. Deliberately separate from `user_role` (`L2-DB-05`): that one
+ * says what a person may do in the operator console, this one says whether
+ * they author cards or study them. One person may hold both.
+ */
+export const schoolRole = pgEnum("school_role", ["teacher", "student"])
+
+/**
+ * A school. Exactly one row today — the seam for multiple schools later, so
+ * that adding the second is new rows rather than a migration plus an audit of
+ * every query written in the meantime.
+ *
+ * @spec L2-SCHOOL-01
+ */
+export const schools = pgTable("school", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  name: text("name").notNull(),
+  /** URL-safe handle. Unique so it can address a school in a path later. */
+  slug: text("slug").unique().notNull(),
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+})
+
+/**
+ * Membership of a person in a school, carrying their product role. A table
+ * rather than columns on `user`, because this is what makes multi-school a
+ * data change instead of a schema change.
+ *
+ * @spec L2-SCHOOL-02
+ */
+export const schoolMembers = pgTable(
+  "school_member",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    schoolId: text("schoolId")
+      .notNull()
+      .references(() => schools.id, { onDelete: "cascade" }),
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    role: schoolRole("role").notNull(),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [
+    // One membership per person per school. A role change is an update.
+    uniqueIndex("school_member_school_user_idx").on(t.schoolId, t.userId),
+    // "Which schools is this person in" — the session-path query.
+    index("school_member_user_idx").on(t.userId),
+  ]
+)
+
+/** Draft courses are invisible to students; publishing activates enrolments. */
+export const courseStatus = pgEnum("course_status", ["draft", "published"])
+
+/**
+ * A course: the unit a student enrols in. Owned by a teacher, scoped to a
+ * school. `schoolId` is denormalized onto the course (rather than reached via
+ * the owner's membership) so every listing query is one indexed read.
+ *
+ * @spec L2-COURSE-01
+ */
+export const courses = pgTable(
+  "course",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    schoolId: text("schoolId")
+      .notNull()
+      .references(() => schools.id, { onDelete: "cascade" }),
+    /** The authoring teacher. Deleting them keeps the course, ownerless. */
+    ownerId: text("ownerId").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    title: text("title").notNull(),
+    description: text("description"),
+    status: courseStatus("status").notNull().default("draft"),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [
+    // "Courses in my school", the only listing query.
+    index("course_school_idx").on(t.schoolId),
+  ]
+)
+
+/**
+ * A deck: a named group of cards inside a course. Ordering is an explicit
+ * integer, not creation time, so a teacher can reorder without touching rows'
+ * timestamps.
+ *
+ * @spec L2-COURSE-02
+ */
+export const decks = pgTable(
+  "deck",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    courseId: text("courseId")
+      .notNull()
+      .references(() => courses.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    position: integer("position").notNull().default(0),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [index("deck_course_idx").on(t.courseId)]
+)
+
+/**
+ * A card: the atom a student reviews. `front` and `back` are markdown, with
+ * images as markdown image references. No card type column in v1 — every card
+ * is front/back and self-rated (`L2-SRS-05`).
+ *
+ * @spec L2-COURSE-03
+ */
+export const cards = pgTable(
+  "card",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    deckId: text("deckId")
+      .notNull()
+      .references(() => decks.id, { onDelete: "cascade" }),
+    front: text("front").notNull(),
+    back: text("back").notNull(),
+    position: integer("position").notNull().default(0),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [index("card_deck_idx").on(t.deckId)]
+)
+
+/**
+ * A student's enrolment in a course. Created by the teacher; the student does
+ * not self-enrol in v1.
+ *
+ * @spec L2-COURSE-04
+ */
+export const enrollments = pgTable(
+  "enrollment",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    courseId: text("courseId")
+      .notNull()
+      .references(() => courses.id, { onDelete: "cascade" }),
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [
+    // Enrolling twice is a mistake, not a second enrolment.
+    uniqueIndex("enrollment_course_user_idx").on(t.courseId, t.userId),
+    // "My courses", the student dashboard query.
+    index("enrollment_user_idx").on(t.userId),
+  ]
+)
+
+/**
+ * One student's memory state for one card. This is the table that makes a
+ * single authored deck serve thirty students on thirty schedules.
+ *
+ * Columns mirror the `ts-fsrs` `Card` shape exactly, `learningSteps`
+ * included — a dropped field corrupts the schedule the next time the row is
+ * fed back into the algorithm.
+ *
+ * `state` holds the ts-fsrs `State` enum as an int (New 0, Learning 1,
+ * Review 2, Relearning 3). Deliberately not a pg enum: these are the
+ * library's values, and a version that adds one must not need a migration.
+ *
+ * @spec L2-SRS-01
+ */
+export const cardStates = pgTable(
+  "card_state",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    cardId: text("cardId")
+      .notNull()
+      .references(() => cards.id, { onDelete: "cascade" }),
+    /** When this card is next due. The queue orders by it. */
+    due: timestamp("due", { mode: "date" }).notNull(),
+    stability: real("stability").notNull(),
+    difficulty: real("difficulty").notNull(),
+    scheduledDays: integer("scheduledDays").notNull(),
+    learningSteps: integer("learningSteps").notNull().default(0),
+    reps: integer("reps").notNull().default(0),
+    lapses: integer("lapses").notNull().default(0),
+    state: integer("state").notNull().default(0),
+    lastReviewAt: timestamp("lastReviewAt", { mode: "date" }),
+  },
+  (t) => [
+    // One state per person per card. A review is an update, never a new row.
+    uniqueIndex("card_state_user_card_idx").on(t.userId, t.cardId),
+    // THE query: "what is due for me now", ordered by due. Everything the
+    // study screen does goes down this index.
+    index("card_state_user_due_idx").on(t.userId, t.due),
+    // Led by cardId so a card delete's cascade finds its rows by index
+    // instead of scanning every student's state.
+    index("card_state_card_idx").on(t.cardId),
+  ]
+)
+
+/**
+ * Append-only record of every answer. The only table that grows without
+ * bound, which is why it holds nothing but numbers and timestamps.
+ *
+ * It earns that growth by being what an FSRS parameter optimisation trains
+ * on later; without it, per-student tuning is impossible after the fact.
+ *
+ * @spec L2-SRS-02
+ */
+export const reviewLogs = pgTable(
+  "review_log",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    cardId: text("cardId")
+      .notNull()
+      .references(() => cards.id, { onDelete: "cascade" }),
+    /** ts-fsrs `Rating`: Again 1, Hard 2, Good 3, Easy 4. */
+    rating: integer("rating").notNull(),
+    /** The state the card was in *before* this answer. */
+    state: integer("state").notNull(),
+    stability: real("stability").notNull(),
+    difficulty: real("difficulty").notNull(),
+    scheduledDays: integer("scheduledDays").notNull(),
+    reviewedAt: timestamp("reviewedAt", { mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("review_log_user_reviewed_idx").on(t.userId, t.reviewedAt),
+    // Led by cardId so a card delete's cascade does not scan the whole log.
+    index("review_log_card_idx").on(t.cardId),
   ]
 )

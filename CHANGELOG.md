@@ -1,133 +1,133 @@
-# [1.19.0](https://github.com/dev-geddy/backflip/compare/v1.18.0...v1.19.0) (2026-09-07)
+# 1.19.0 (2026-09-07)
 
 
 ### Features
 
-* **web:** surface mcp scope gaps and trim the public site to the hero ([#47](https://github.com/dev-geddy/backflip/issues/47)) ([62c395e](https://github.com/dev-geddy/backflip/commit/62c395ead3794147ffc04bc4beef1ed29e23e0f4))
+* **web:** surface mcp scope gaps and trim the public site to the hero (62c395e)
 
-# [1.18.0](https://github.com/dev-geddy/backflip/compare/v1.17.0...v1.18.0) (2026-09-05)
-
-
-### Features
-
-* **ui:** add teal to the shipped chrome presets ([#46](https://github.com/dev-geddy/backflip/issues/46)) ([2c6ebf4](https://github.com/dev-geddy/backflip/commit/2c6ebf411af0417694056c8a073ff66edc6bfaad))
-
-# [1.17.0](https://github.com/dev-geddy/backflip/compare/v1.16.0...v1.17.0) (2026-09-05)
+# 1.18.0 (2026-09-05)
 
 
 ### Features
 
-* **ui:** cap admin content at 1440px ([#45](https://github.com/dev-geddy/backflip/issues/45)) ([ab66487](https://github.com/dev-geddy/backflip/commit/ab66487b2e5f4fb36d0bcf771865a36eec186a82))
+* **ui:** add teal to the shipped chrome presets (2c6ebf4)
 
-# [1.16.0](https://github.com/dev-geddy/backflip/compare/v1.15.0...v1.16.0) (2026-09-05)
-
-
-### Features
-
-* **ui:** make stored integration keys read-only and removable ([#44](https://github.com/dev-geddy/backflip/issues/44)) ([a9fbf6b](https://github.com/dev-geddy/backflip/commit/a9fbf6b2daaac749ac5a77af8a3685792ee1734d))
-
-# [1.15.0](https://github.com/dev-geddy/backflip/compare/v1.14.0...v1.15.0) (2026-09-03)
+# 1.17.0 (2026-09-05)
 
 
 ### Features
 
-* **ui:** sidebar and header theme presets, and a branded homepage hero ([#43](https://github.com/dev-geddy/backflip/issues/43)) ([d2adfbe](https://github.com/dev-geddy/backflip/commit/d2adfbe8144684256f6ad5bd45600e83b6304d0f))
+* **ui:** cap admin content at 1440px (ab66487)
 
-# [1.14.0](https://github.com/dev-geddy/backflip/compare/v1.13.0...v1.14.0) (2026-09-03)
-
-
-### Features
-
-* **auth:** render sign-in errors on a styled page ([#42](https://github.com/dev-geddy/backflip/issues/42)) ([61b6168](https://github.com/dev-geddy/backflip/commit/61b6168b0582d1f3c73112a75cc3d592da7ac8c1))
-
-# [1.13.0](https://github.com/dev-geddy/backflip/compare/v1.12.0...v1.13.0) (2026-09-03)
+# 1.16.0 (2026-09-05)
 
 
 ### Features
 
-* **web:** breadcrumb tab titles and account sign-in method row ([#41](https://github.com/dev-geddy/backflip/issues/41)) ([5c05fb0](https://github.com/dev-geddy/backflip/commit/5c05fb08bbb968befffdcfeacb05bf8e89721109))
+* **ui:** make stored integration keys read-only and removable (a9fbf6b)
 
-# [1.12.0](https://github.com/dev-geddy/backflip/compare/v1.11.0...v1.12.0) (2026-09-03)
-
-
-### Features
-
-* **web:** manage ignored installs and prune old start rows ([#40](https://github.com/dev-geddy/backflip/issues/40)) ([0a37f6c](https://github.com/dev-geddy/backflip/commit/0a37f6c758b83bcb6dc7a6dfd75302d6ec5a1a2b))
-
-# [1.11.0](https://github.com/dev-geddy/backflip/compare/v1.10.0...v1.11.0) (2026-09-02)
+# 1.15.0 (2026-09-03)
 
 
 ### Features
 
-* **web:** count anonymous project starts and chart them in admin ([#39](https://github.com/dev-geddy/backflip/issues/39)) ([fc4533f](https://github.com/dev-geddy/backflip/commit/fc4533f45a0dfc8ed8e9e8ed34a02ef341063c11))
+* **ui:** sidebar and header theme presets, and a branded homepage hero (d2adfbe)
 
-# [1.10.0](https://github.com/dev-geddy/backflip/compare/v1.9.1...v1.10.0) (2026-09-02)
+# 1.14.0 (2026-09-03)
 
 
 ### Features
 
-* **web:** ramp the default chrome and start the glass header opaque ([#38](https://github.com/dev-geddy/backflip/issues/38)) ([3a56848](https://github.com/dev-geddy/backflip/commit/3a56848e4cab9bd2513063757a4e2816ba225cc2))
+* **auth:** render sign-in errors on a styled page (61b6168)
 
-## [1.9.1](https://github.com/dev-geddy/backflip/compare/v1.9.0...v1.9.1) (2026-09-02)
+# 1.13.0 (2026-09-03)
+
+
+### Features
+
+* **web:** breadcrumb tab titles and account sign-in method row (5c05fb0)
+
+# 1.12.0 (2026-09-03)
+
+
+### Features
+
+* **web:** manage ignored installs and prune old start rows (0a37f6c)
+
+# 1.11.0 (2026-09-02)
+
+
+### Features
+
+* **web:** count anonymous project starts and chart them in admin (fc4533f)
+
+# 1.10.0 (2026-09-02)
+
+
+### Features
+
+* **web:** ramp the default chrome and start the glass header opaque (3a56848)
+
+## 1.9.1 (2026-09-02)
 
 
 ### Bug Fixes
 
-* **web:** keep the chrome ramp continuous across the sidebar seam ([5e85e37](https://github.com/dev-geddy/backflip/commit/5e85e37461a8c8f6a518fd0b7249f958258455c3))
+* **web:** keep the chrome ramp continuous across the sidebar seam (5e85e37)
 
-# [1.9.0](https://github.com/dev-geddy/backflip/compare/v1.8.0...v1.9.0) (2026-09-02)
-
-
-### Features
-
-* **web:** correct the glass header backdrop per palette tone and mode ([857b5ef](https://github.com/dev-geddy/backflip/commit/857b5efcc74b8fb27ae2f592139d72dc9d7db922))
-
-# [1.8.0](https://github.com/dev-geddy/backflip/compare/v1.7.0...v1.8.0) (2026-09-02)
+# 1.9.0 (2026-09-02)
 
 
 ### Features
 
-* **web:** paint the admin chrome as a gradient and add a glass header ([b2e37e4](https://github.com/dev-geddy/backflip/commit/b2e37e454fe16c461ff89a606e1e1edb9e8ec6d3))
+* **web:** correct the glass header backdrop per palette tone and mode (857b5ef)
 
-# [1.7.0](https://github.com/dev-geddy/backflip/compare/v1.6.0...v1.7.0) (2026-09-02)
-
-
-### Features
-
-* **web:** consolidate admin nav into the user menu and one palette ([3d0949d](https://github.com/dev-geddy/backflip/commit/3d0949db430fb5271dceada51dae8afdc81d604d))
-
-# [1.6.0](https://github.com/dev-geddy/backflip/compare/v1.5.1...v1.6.0) (2026-09-02)
+# 1.8.0 (2026-09-02)
 
 
 ### Features
 
-* **auth:** sync the Google profile picture into the user avatar ([1ec96f5](https://github.com/dev-geddy/backflip/commit/1ec96f5e7b72baa24d34616e132eccdd326528ba))
+* **web:** paint the admin chrome as a gradient and add a glass header (b2e37e4)
 
-## [1.5.1](https://github.com/dev-geddy/backflip/compare/v1.5.0...v1.5.1) (2026-09-02)
+# 1.7.0 (2026-09-02)
+
+
+### Features
+
+* **web:** consolidate admin nav into the user menu and one palette (3d0949d)
+
+# 1.6.0 (2026-09-02)
+
+
+### Features
+
+* **auth:** sync the Google profile picture into the user avatar (1ec96f5)
+
+## 1.5.1 (2026-09-02)
 
 
 ### Bug Fixes
 
-* **web:** use the brand glyph for the favicon and the auth page logos ([bbaf209](https://github.com/dev-geddy/backflip/commit/bbaf2098793c89427b13906d3b73bf25a4febf82))
+* **web:** use the brand glyph for the favicon and the auth page logos (bbaf209)
 
-# [1.5.0](https://github.com/dev-geddy/backflip/compare/v1.4.0...v1.5.0) (2026-09-01)
-
-
-### Features
-
-* **ui:** green on-state switch and cleaner command palette rows ([816b11c](https://github.com/dev-geddy/backflip/commit/816b11c6283b3c4b554fe6ba4daaade4790d8413))
-
-# [1.4.0](https://github.com/dev-geddy/backflip/compare/v1.3.0...v1.4.0) (2026-09-01)
+# 1.5.0 (2026-09-01)
 
 
 ### Features
 
-* **web:** surface the MCP connector on the homepage ([58f261e](https://github.com/dev-geddy/backflip/commit/58f261e04fa064384bfc9301920505f4e6ad5c5b))
+* **ui:** green on-state switch and cleaner command palette rows (816b11c)
 
-# [1.3.0](https://github.com/dev-geddy/backflip/compare/v1.2.0...v1.3.0) (2026-09-01)
+# 1.4.0 (2026-09-01)
 
 
 ### Features
 
-* **web:** add per-user chrome themes for the admin sidebar and header ([#34](https://github.com/dev-geddy/backflip/issues/34)) ([d521061](https://github.com/dev-geddy/backflip/commit/d521061f8b72f985f5c7e7003cbc7dfe3ae1a9dd))
-* **web:** rework the docs explorer and clear the reported drift ([#35](https://github.com/dev-geddy/backflip/issues/35)) ([7b1efb3](https://github.com/dev-geddy/backflip/commit/7b1efb392737f6e003d87a698e98b09ccd6e8b6c))
+* **web:** surface the MCP connector on the homepage (58f261e)
+
+# 1.3.0 (2026-09-01)
+
+
+### Features
+
+* **web:** add per-user chrome themes for the admin sidebar and header (d521061)
+* **web:** rework the docs explorer and clear the reported drift (7b1efb3)
