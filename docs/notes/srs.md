@@ -7,6 +7,8 @@
 - `apps/web/app/_lib/srs/schedule.test.ts` — the unit suite (9 tests, see below). Satisfies `L2-SRS-03`.
 - `packages/db/src/schema.ts` — `cardStates` / `reviewLogs`, from Task 1. See `docs/notes/db.md` ("card_state and review_log tables (0021)"). Satisfies `L2-SRS-01`, `L2-SRS-02`.
 - `apps/web/package.json` — `ts-fsrs` pinned at `5.4.2` (exact, no `^`). Satisfies `L2-SRS-09`.
+- `apps/web/app/_lib/srs/queue.ts` — the study queue. `QueueCard`, `interleave`, `NEW_CARDS_PER_DAY`, `startOfUtcDay`, `dueQueue`, `dueCount`. Satisfies `L2-SRS-04`.
+- `apps/web/app/_lib/srs/queue.test.ts` — unit suite for the pure parts (7 tests, see below). Satisfies `L2-SRS-04`.
 
 ## Why `elapsed_days` is derived, not stored
 `ts-fsrs`'s `Card` type still carries `elapsed_days` even though the library deprecated it and the scheduling algorithm doesn't read it. `MemoryState` has no field for it — `toFsrsCard` computes it from `due` − `lastReviewAt` (whole days, floor at 0, 0 when the card has never been reviewed) each time a `Card` is built for the library. Storing it would be a column that can silently drift from the fields that actually drive scheduling; deriving it means `card_state` only ever holds numbers the algorithm depends on.
@@ -17,12 +19,32 @@
 ## Test suite: what "four Goods" is doing
 `play([3, 3, 3, 3])` — four consecutive Good answers, each one answered exactly on its `due` date — reaches `ts-fsrs` `State.Review` (2) on the default parameters, verified by the "counts a lapse" test's own assertion (`learned.state` toBe `2`) before it does anything else with the resulting state. If a future `ts-fsrs` version's defaults change how many correct reviews it takes to leave learning, that assertion is what fails first and is the signal to raise the count in `play(...)` across every affected test together — the brief calls this out explicitly. It did not come up during this task: four Goods reaches state 2 on the first attempt, and the "lengthens the interval" test's six-Good run (`play([3, 3, 3, 3, 3, 3])`) also passed unchanged.
 
+## How the queue decides what a student sees
+`dueQueue`/`dueCount` run two separate index-only queries rather than one join, then combine in memory:
+- **Due**: `card_state` rows for this user in this course (join `card` → `deck` for `courseId`) with `due <= now`, ordered by `due`, capped at `limit` (`dueQueue` only). These are cards the student has reviewed before.
+- **Fresh**: `card` rows in this course with no `card_state` row for this user (`leftJoin` + `isNull(cardStates.id)`), ordered by deck position, then card position, then `createdAt`, capped at the day's *remaining* new-card allowance.
+`interleave` then alternates due, fresh, due, fresh, …, due-first, appending whichever list outlasts the other. It is pure and is the unit-tested part; the SQL itself is exercised by the Playwright path in a later task, not mocked here.
+
+Both `dueQueue` and `dueCount` are gated by `studiableCourse(userId, courseId)` — enrolment AND the course being `published` — before touching `card_state`/`card`/`review_log` at all, same guard, same order, in both functions. This is the concrete enforcement of "every review query reaches `card_state` through `enrollment`" (`L2-DB-45`'s consequence, `L2-COURSE-08`) plus the draft-course-is-invisible rule (`L2-COURSE-09`). An unenrolled or not-yet-published course silently returns `[]` / `0`, never throws — the same shape as "nothing due yet".
+
+## The new-card cap is daily, counted from `review_log`, not from a per-call constant
+The naive reading — "take up to `NEW_CARDS_PER_DAY` fresh cards every time `dueQueue` runs" — hands out 20 more cards on every page reload, which defeats the point of a cap. Instead `remainingNewCardAllowance` (private, shared by both `dueQueue` and `dueCount`) counts `review_log` rows for this user, joined `card` → `deck` to this course, where `state = 0` (the pre-answer state was New — so a card's *first* answer counts, and only that one) and `reviewedAt >= startOfUtcDay(now)`. `remaining = max(0, NEW_CARDS_PER_DAY - introducedToday)`. `dueQueue`'s fresh query is `.limit(remaining)`, skipped entirely (no query) when `remaining` is 0. This only works because `card_state` rows are never deleted on unenrol (`L2-DB-45`) and `review_log` is append-only (`L2-SRS-02`) — the count is a genuine history, not a snapshot that could be reset by re-enrolling.
+
+The UTC-midnight boundary is a deliberate trade-off, not an oversight: there is no per-user timezone in v1, so a student who studies late at night local time may see the cap reset at an odd local hour (e.g. 2am or 4am depending on offset) rather than at their own midnight. `startOfUtcDay` is exported and unit-tested (a time just before, and just after, UTC midnight) so the boundary itself has a regression test even though the SQL around it doesn't.
+
+`dueQueue` and `dueCount` both take `now: Date = new Date()` as their last parameter and thread it through to *both* the `due <=` comparison and `startOfUtcDay` — one clock read per call, not two, so a call straddling midnight can't see the due-check and the daily-cap-reset disagree about what "now" was.
+
+## `dueCount`'s formula: reviewed-and-due, plus room for unseen
+`dueCount = (reviewed cards in this course with due <= now) + min(unseen cards in this course, remaining new-card allowance today)`. The first half is exactly the old "cards with a `card_state` row that's due" query. The second half exists because a `card_state` row is only created the first time a card is answered — a freshly enrolled student who has answered nothing has zero `card_state` rows, so without the unseen half every course would show "0 due" until the student's first review, which is wrong: a one-card course a student just enrolled in should read "1 due", not "nothing due". The `min(...)` is what keeps the badge honest against the same daily cap `dueQueue` enforces, rather than counting every unseen card regardless of the allowance.
+
 ## How to run the suite
 ```
 corepack yarn workspace web test srs
+corepack yarn workspace web test queue
 ```
-Runs just `schedule.test.ts` (vitest's positional filter matches the path). Full web unit suite: `corepack yarn workspace web test`. Typecheck: `corepack yarn workspace web typecheck`.
+The first runs just `schedule.test.ts`, the second just `queue.test.ts` (vitest's positional filter matches the path). Full web unit suite: `corepack yarn workspace web test`. Typecheck: `corepack yarn workspace web typecheck`.
 
 ## State
-- Scheduler done: `newCardState`, `schedule`, `GRADES`, all four `MemoryState`/`ReviewOutcome`/`Grade` types. 9/9 unit tests pass, no exact-value assertions needed loosening (see above). Typecheck clean, full web suite (375 tests) green.
-- Not built yet, later tasks in this plan: the due-cards queue (`L2-SRS-04`), the `answerCard` write path (`L2-SRS-06`), and the student/teacher routes (`L2-SRS-07`, `L2-SRS-08`) that will be the only callers of `schedule`/`newCardState` outside this test file.
+- Scheduler done: `newCardState`, `schedule`, `GRADES`, all four `MemoryState`/`ReviewOutcome`/`Grade` types. 9/9 unit tests pass, no exact-value assertions needed loosening (see above).
+- Queue done: `interleave`, `startOfUtcDay`, `NEW_CARDS_PER_DAY`, `dueQueue`, `dueCount`. 7/7 unit tests pass (5 `interleave`, 2 `startOfUtcDay`); the SQL paths are server-only and covered by Playwright in a later task, not unit-tested here. Typecheck clean, full web suite (382 tests) green.
+- Not built yet, later tasks in this plan: the `answerCard` write path and the student/teacher routes that will be the callers of `dueQueue`/`dueCount`/`schedule`/`newCardState` outside test files.
