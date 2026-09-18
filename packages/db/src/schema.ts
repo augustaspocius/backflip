@@ -808,6 +808,9 @@ export const cardStates = pgTable(
     // THE query: "what is due for me now", ordered by due. Everything the
     // study screen does goes down this index.
     index("card_state_user_due_idx").on(t.userId, t.due),
+    // Led by cardId so a card delete's cascade finds its rows by index
+    // instead of scanning every student's state.
+    index("card_state_card_idx").on(t.cardId),
   ]
 )
 
@@ -841,5 +844,9 @@ export const reviewLogs = pgTable(
     scheduledDays: integer("scheduledDays").notNull(),
     reviewedAt: timestamp("reviewedAt", { mode: "date" }).notNull().defaultNow(),
   },
-  (t) => [index("review_log_user_reviewed_idx").on(t.userId, t.reviewedAt)]
+  (t) => [
+    index("review_log_user_reviewed_idx").on(t.userId, t.reviewedAt),
+    // Led by cardId so a card delete's cascade does not scan the whole log.
+    index("review_log_card_idx").on(t.cardId),
+  ]
 )
