@@ -13279,6 +13279,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"ts-fsrs@npm:5.4.2":
+  version: 5.4.2
+  resolution: "ts-fsrs@npm:5.4.2"
+  checksum: 10c0/e682a039ed1645666537bf0b32b7ca6c1a956075bb48124bd375ff9b769b7ab034df6ebcba99453ab6f741426eeaa7feb9ddd2d1bc641e79807b91e2cbb51024
+  languageName: node
+  linkType: hard
+
 "ts-morph@npm:^26.0.0":
   version: 26.0.0
   resolution: "ts-morph@npm:26.0.0"
@@ -14015,6 +14022,7 @@ __metadata:
     remark-gfm: "npm:^4.0.1"
     resend: "npm:^6.18.0"
     server-only: "npm:^0.0.1"
+    ts-fsrs: "npm:5.4.2"
     tsx: "npm:^4.23.1"
     typescript: "npm:^5"
     vitest: "npm:^4.1.10"
