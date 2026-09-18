@@ -103,7 +103,7 @@
 
 /* ------------------------------------------------------------------ *
  * Admin chrome themes — sidebar + header palette, picked per user in
- * `/backflip/account`. Ids here must match `apps/web/app/_lib/theme/
+ * `/rnl-admin/account`. Ids here must match `apps/web/app/_lib/theme/
  * chrome-themes.ts`; that module is the catalog, this file is the paint.
  *
  * Named themes are fixed palettes: they do NOT follow the light/dark
@@ -155,7 +155,7 @@
  *
  * Scoped to `[data-surface="public"]`, stamped on the root element of every
  * public page. The admin never carries that attribute, so nothing here can
- * reach `/backflip/*`: this file's shared tokens (`--primary`, `--accent`,
+ * reach `/rnl-admin/*`: this file's shared tokens (`--primary`, `--accent`,
  * `--foreground`, …) are left exactly as they were, and the brand is
  * additive rather than a re-point of anything the admin renders.
  *

@@ -9,7 +9,10 @@ import { config } from "dotenv"
 // password is never injected into the running app (dev + docker load only `.env`
 // + `.env.local`). Later files win; missing files are ignored.
 // Repo root = four levels up from packages/db/src/seed.
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..")
+const root = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../../.."
+)
 config({ path: [path.join(root, ".env"), path.join(root, ".env.init")] })
 
 /**
@@ -44,12 +47,12 @@ async function main() {
     role: "owner"
     name: string
     passwordHash?: string
-  } = { role: "owner", name: "Dev Geddy" }
+  } = { role: "owner", name: "Owner" }
   if (passwordHash) updateSet.passwordHash = passwordHash
 
   await db
     .insert(users)
-    .values({ email, passwordHash, role: "owner", name: "Dev Geddy" })
+    .values({ email, passwordHash, role: "owner", name: "Owner" })
     .onConflictDoUpdate({ target: users.email, set: updateSet })
 
   console.log(

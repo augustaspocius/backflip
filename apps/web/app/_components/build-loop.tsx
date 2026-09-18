@@ -18,7 +18,7 @@
 
 /** One line per prompt. Kept here so the surfaces cannot drift apart. */
 export const BUILD_LOOP_PROMPTS = [
-  "clone github.com/dev-geddy/backflip",
+  "clone github.com/augustaspocius/backflip",
   "set up and run this project locally",
   "create a user for me and give me the login URL",
   "build feature <...>",

@@ -1,0 +1,100 @@
+import type { CSSProperties, ReactNode } from "react"
+import { redirect } from "next/navigation"
+
+import { SidebarInset, SidebarProvider } from "@workspace/ui/components/sidebar"
+
+import { auth } from "@/app/_lib/auth"
+import { getMembership } from "@/app/_lib/school"
+import { chromeToneOf, customChromeVars } from "@/app/_lib/theme/chrome-themes"
+import { getChromePreferences } from "@/app/_lib/theme/preferences"
+import { AppSidebar } from "./_components/app-sidebar"
+import { SiteHeader } from "./_components/site-header"
+import type { SessionUser } from "./_components/types"
+
+/**
+ * Authenticated /rnl-admin shell (Flat Admin design): a flush left sidebar
+ * (248px) against a soft canvas, with a 48px header. The proxy already gates
+ * this subtree; `auth()` provides the user.
+ *
+ * The user's chrome preferences are resolved here and stamped on the shell
+ * wrapper as `data-chrome-theme` + `data-chrome-header`, so the themed chrome
+ * arrives with the server HTML — no flash of the default palette on every
+ * navigation (`L2-UI-25`). `data-chrome-header="plain"` keeps the sidebar
+ * themed while the header falls back to plain light/dark (`L2-UI-32`), and
+ * `data-chrome-glass="on"` floats the header over the page as frosted glass
+ * (`L2-UI-45`) — a separate attribute because it is orthogonal to the tint.
+ * `data-chrome-tone` says whether the palette is fixed-dark or fixed-light, so
+ * the glass filter chain can be picked per tone × mode; `default` carries none
+ * because it follows the mode.
+ *
+ * Page content is capped at `--content-width` (1440px) and centred inside the
+ * full-bleed canvas (`L2-UI-61`).
+ *
+ * @spec L2-UI-25, L2-UI-61
+ */
+export default async function ProtectedLayout({
+  children,
+}: {
+  children: ReactNode
+}) {
+  const session = await auth()
+  if (!session?.user) redirect("/rnl-admin/login")
+
+  const [chrome, membership] = await Promise.all([
+    getChromePreferences(session.user.id),
+    getMembership(session.user.id),
+  ])
+  // `custom` has no stylesheet block — its palette ships as inline variables
+  // in exactly the shape a theme block would declare (`L2-UI-33`).
+  const customVars =
+    chrome.theme === "custom"
+      ? customChromeVars(
+          chrome.custom.surface,
+          chrome.custom.accent,
+          chrome.headerThemed
+        )
+      : {}
+
+  const user: SessionUser = {
+    name: session.user.name ?? "Owner",
+    email: session.user.email ?? "",
+    image: session.user.image ?? null,
+    role: session.user.role,
+    schoolRole: membership?.role ?? null,
+  }
+
+  return (
+    <SidebarProvider
+      data-chrome-theme={chrome.theme}
+      data-chrome-header={chrome.headerThemed ? "themed" : "plain"}
+      data-chrome-glass={chrome.headerGlass ? "on" : "off"}
+      data-chrome-tone={chromeToneOf(chrome.theme, chrome.custom.surface)}
+      style={
+        {
+          "--sidebar-width": "15.5rem",
+          "--sidebar-width-icon": "3.5rem",
+          "--header-height": "3rem",
+          // px, not rem: the base scale is 17px (`globals.css`), so a rem
+          // value would drift off 1440 the moment that knob moves.
+          "--content-width": "1440px",
+          ...customVars,
+        } as CSSProperties
+      }
+    >
+      <AppSidebar user={user} />
+      <SidebarInset>
+        <SiteHeader />
+        {/* The canvas stays full-bleed so the muted ground still reaches both
+            edges; only the content inside it is capped and centred. The header
+            deliberately keeps its own full width (`L2-UI-61`). */}
+        <div className="flex min-h-0 flex-1 flex-col bg-muted/40">
+          {/* No outer padding: master-detail pages go full-bleed to the cap;
+              padded pages (dashboard/account) add their own padding. */}
+          <div className="mx-auto flex min-h-0 w-full max-w-(--content-width) flex-1 flex-col">
+            {children}
+          </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
+  )
+}

@@ -44,11 +44,11 @@ import { OUTSIDER_DECK_TITLE } from "./global-setup"
  */
 
 async function login(page: Page, email: string, password: string) {
-  await page.goto("/backflip/login")
+  await page.goto("/rnl-admin/login")
   await page.getByLabel("Email").fill(email)
   await page.getByLabel("Password").fill(password)
   await page.getByRole("button", { name: "Sign in" }).click()
-  await expect(page).toHaveURL("/backflip")
+  await expect(page).toHaveURL("/rnl-admin")
 }
 
 async function switchUser(page: Page, email: string, password: string) {

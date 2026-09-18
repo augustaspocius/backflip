@@ -70,7 +70,7 @@ function readConsent(): Consent | null {
  *   loads nothing at all. Either choice is persisted in localStorage, so the
  *   banner is never shown again.
  *
- * Mounted from public chrome only (`SiteFooter`) — never under `/backflip`.
+ * Mounted from public chrome only (`SiteFooter`) — never under `/rnl-admin`.
  *
  * @spec L2-ANALYTICS-04, L2-ANALYTICS-06
  */

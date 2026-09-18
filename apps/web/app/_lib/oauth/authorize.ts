@@ -16,7 +16,7 @@ import {
 
 /**
  * Validation of an `/api/oauth/authorize` request. Shared by the route (which
- * hands a valid request to the consent screen) and by `/backflip/connect`
+ * hands a valid request to the consent screen) and by `/rnl-admin/connect`
  * itself, which re-validates before minting a code — the consent page must
  * never trust the query string it was handed.
  *

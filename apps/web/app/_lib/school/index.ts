@@ -60,7 +60,9 @@ export async function getCurrentSchoolId() {
  * pick rather than whatever row Postgres returns first — not a claim that
  * multi-school membership is otherwise supported yet (see `L2-SCHOOL-11`).
  */
-export async function getMembership(userId: string): Promise<Membership | null> {
+export async function getMembership(
+  userId: string
+): Promise<Membership | null> {
   const [row] = await db
     .select({ schoolId: schoolMembers.schoolId, role: schoolMembers.role })
     .from(schoolMembers)
@@ -81,10 +83,10 @@ export async function getMembership(userId: string): Promise<Membership | null> 
  */
 export async function requireMembership() {
   const session = await auth()
-  if (!session?.user) redirect("/backflip/login")
+  if (!session?.user) redirect("/rnl-admin/login")
 
   const membership = await getMembership(session.user.id)
-  if (!membership) redirect("/backflip")
+  if (!membership) redirect("/rnl-admin")
 
   return {
     userId: session.user.id,

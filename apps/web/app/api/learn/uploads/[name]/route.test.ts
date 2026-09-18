@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
  *
  * `auth` is mocked directly (not the whole `@/app/_lib/auth` config chain)
  * so this test needs no database/NextAuth setup — same pattern as
- * `apps/web/app/backflip/(protected)/connect/_actions.test.ts`.
+ * `apps/web/app/rnl-admin/(protected)/connect/_actions.test.ts`.
  */
 
 const h = vi.hoisted(() => ({ signedIn: true }))
@@ -66,7 +66,10 @@ describe("GET /api/learn/uploads/[name]", () => {
   })
 
   it("404s a well-formed name that simply doesn't exist on disk", async () => {
-    const res = await GET(new Request("http://x"), params("00000000-0000-0000-0000-000000000000.png"))
+    const res = await GET(
+      new Request("http://x"),
+      params("00000000-0000-0000-0000-000000000000.png")
+    )
     expect(res.status).toBe(404)
   })
 })

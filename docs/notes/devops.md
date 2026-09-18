@@ -57,7 +57,6 @@ Privilege model (both flavors): locked `backflip` app user (`APP_USER` in `lib/c
 - Flavors must not mix on one droplet: nginx and Caddy both bind 80/443.
 - `sudo -u backflip` keeps the invoking cwd (often `/root`) — inaccessible to backflip → node/pm2 spawns die with EACCES. Every `sudo -H -u backflip` invocation must `cd` first (scripts do; remember for ad-hoc ssh commands).
 - pm2 `startOrRestart` never updates an existing app's **script path** — after a deploy-dir move the process kept executing the old entrypoint (hit live on the /opt→/var/www migration: `errored`, MODULE_NOT_FOUND on the old path). Fragments now compare `pm_exec_path` against `$REMOTE_DIR/devops/pm2/start.sh` and `pm2 delete` + start when they differ.
-- Current droplet 137.184.106.241 = pm2 flavor + native Postgres 17, instance `backflip` @ 3070, domain `backflip.dev-geddy.com` (LE cert issued 2026-07-29, auto-renew timer on). Deploy dir `/var/www/backflip.dev-geddy.com` (migrated from `/opt/backflip` 2026-07-29).
 - Base + hardening block intentionally duplicated between the two setup scripts (each stays single-file, runnable in one go); keep them in sync when editing.
 - CI wrappers assume the pm2 droplet flavor (build-locally script). A docker-flavor droplet would need the wrapper line switched back to `deploy-for-docker.sh`.
 - `sync_repo` doesn't support SSH key paths with spaces (rsync `-e` word-splitting).
@@ -109,7 +108,7 @@ Tagging first leaves the tag pointing at a tree whose version file is older, so 
 
 The case that forced this: "Protect master branch" carries `required_signatures`, the runner has no signing key, and every run died with `GH013 … Commits must have verified signatures` in `prepare` — before the tag, before the release. The key has to sit on the ruleset's **bypass list**; a user-owned repo offers no GitHub Actions entry there, only roles and *Deploy keys*, so the key is the one actor exemptable without lending an account's rights. It is repo-scoped, revocable and impersonates nobody. Signature enforcement still applies to every human push.
 
-**Setting the key up** (once, from a clone; `<owner>/<repo>` = `dev-geddy/backflip`):
+**Setting the key up** (once, from a clone; `<owner>/<repo>` = `augustaspocius/backflip`):
 
 ```sh
 # 1. Keypair. Private half stays in ~/.ssh — never in the repo.

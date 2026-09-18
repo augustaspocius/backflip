@@ -46,7 +46,7 @@ import { OUTSIDER_COURSE_TITLE, OUTSIDER_DECK_TITLE } from "./global-setup"
  */
 
 async function login(page: Page, email: string, password: string) {
-  await page.goto("/backflip/login")
+  await page.goto("/rnl-admin/login")
   await page.getByLabel("Email").fill(email)
   await page.getByLabel("Password").fill(password)
   await page.getByRole("button", { name: "Sign in" }).click()
@@ -96,7 +96,7 @@ test("a teacher authors a course, populates it, enrols a student, and publishes 
   page,
 }) => {
   await login(page, OWNER.email, OWNER.password)
-  await expect(page).toHaveURL("/backflip")
+  await expect(page).toHaveURL("/rnl-admin")
 
   const title = `Cellular Biology ${Date.now()}`
 
@@ -195,7 +195,7 @@ test.describe("cross-school isolation", () => {
     page,
   }) => {
     await login(page, OWNER.email, OWNER.password)
-    await expect(page).toHaveURL("/backflip")
+    await expect(page).toHaveURL("/rnl-admin")
 
     await test.step("absent from the course list", async () => {
       await page.goto("/learn/courses")
@@ -230,7 +230,7 @@ test.describe("cross-school isolation", () => {
     page,
   }) => {
     await login(page, OUTSIDER.email, OUTSIDER.password)
-    await expect(page).toHaveURL("/backflip")
+    await expect(page).toHaveURL("/rnl-admin")
 
     await page.goto("/learn/courses")
     const courseLink = page.getByRole("link", { name: OUTSIDER_COURSE_TITLE })
@@ -257,7 +257,7 @@ test("a deck from another course in the SAME school 404s under the wrong course'
   page,
 }) => {
   await login(page, OWNER.email, OWNER.password)
-  await expect(page).toHaveURL("/backflip")
+  await expect(page).toHaveURL("/rnl-admin")
 
   async function createCourseWithDeck(label: string) {
     const courseTitle = `Course ${label} ${Date.now()}`
@@ -320,7 +320,7 @@ test("enrollStudent rejects a hostile client posting a foreign student id, and w
   const foreignStudentId = rivalStudentRow.id
 
   await login(page, OWNER.email, OWNER.password)
-  await expect(page).toHaveURL("/backflip")
+  await expect(page).toHaveURL("/rnl-admin")
 
   // A fresh default-school course, isolated from the happy-path test's
   // course — this test only needs *a* course OWNER's school owns, with a

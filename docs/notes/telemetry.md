@@ -5,7 +5,7 @@
 ## File map
 - `packages/db/src/schema.ts` — `telemetryInstall` + `telemetryStart`. Satisfies `L2-TELEMETRY-01`, `L2-TELEMETRY-02`, `L2-DB-34`, `L2-DB-35`.
 - `packages/db/migrations/0017_curved_inhumans.sql` — drizzle-kit generated; both tables + two indexes on `telemetry_start`.
-- `scripts/track-start.mjs` — the client. Reads/creates `.backflip/install-id`, prints the first-run notice, posts once. Satisfies `L2-TELEMETRY-10`, `L2-TELEMETRY-11`, `L2-TELEMETRY-15`.
+- `scripts/track-start.mjs` — the client. Exits at once unless `BACKFLIP_TELEMETRY_ENDPOINT` is set (no built-in endpoint, `L2-TELEMETRY-03`); otherwise reads/creates `.backflip/install-id`, prints the first-run notice, posts once. Satisfies `L2-TELEMETRY-10`, `L2-TELEMETRY-11`, `L2-TELEMETRY-15`.
 - `package.json` — root `dev` is `node scripts/track-start.mjs & turbo dev`. Yarn's portable shell handles `&`, so this stays cross-platform.
 - `apps/web/app/_lib/telemetry/config.ts` — salt lookup, `telemetryHash`, `utcDay`, the four tuning constants. Satisfies `L2-TELEMETRY-03`, `L2-TELEMETRY-04`.
 - `apps/web/app/_lib/telemetry/payload.ts` — strict zod schema + `plausibleVersion`. Satisfies `L2-TELEMETRY-06`.
@@ -14,10 +14,10 @@
 - `apps/web/app/_lib/telemetry/queries.ts` — the only reader: `getTelemetrySummary` (cards) + `getTelemetryInstalls` (manager). Satisfies `L2-TELEMETRY-08`, `L2-TELEMETRY-20`, `L2-TELEMETRY-33`.
 - `apps/web/app/api/public/telemetry/start/route.ts` — ingest. Satisfies `L2-TELEMETRY-09`, `L2-TELEMETRY-22/23/24`.
 - `apps/web/app/_lib/telemetry/retention.ts` — the sweep + its in-process 24h throttle; the cutoff maths lives in `config.ts` so it stays testable. Satisfies `L2-TELEMETRY-31`, `L2-TELEMETRY-32`.
-- `apps/web/app/backflip/(protected)/_actions.ts` — `setTelemetryInstallIgnored`, `settings`-gated, revalidates `/backflip`. Satisfies `L2-TELEMETRY-34`.
-- `apps/web/app/backflip/(protected)/_components/telemetry-cards.tsx` — the two cards. Satisfies `L2-TELEMETRY-12`.
-- `apps/web/app/backflip/(protected)/_components/telemetry-installs.tsx` — the install manager drawer. Satisfies `L2-TELEMETRY-35`.
-- `apps/web/app/backflip/(protected)/page.tsx` — gates on `canAccessSettings`, `.catch(() => null)` around the read. Satisfies `L2-TELEMETRY-19`, `L2-TELEMETRY-25`.
+- `apps/web/app/rnl-admin/(protected)/_actions.ts` — `setTelemetryInstallIgnored`, `settings`-gated, revalidates `/rnl-admin`. Satisfies `L2-TELEMETRY-34`.
+- `apps/web/app/rnl-admin/(protected)/_components/telemetry-cards.tsx` — the two cards. Satisfies `L2-TELEMETRY-12`.
+- `apps/web/app/rnl-admin/(protected)/_components/telemetry-installs.tsx` — the install manager drawer. Satisfies `L2-TELEMETRY-35`.
+- `apps/web/app/rnl-admin/(protected)/page.tsx` — gates on `canAccessSettings`, `.catch(() => null)` around the read. Satisfies `L2-TELEMETRY-19`, `L2-TELEMETRY-25`.
 - `apps/web/app/_lib/client-ip.ts` — `clientIp`, moved up from `_lib/oauth/limits.ts` (which re-exports it) when a second surface needed it. Shared by `L2-MCP-30` and `L2-TELEMETRY-05`.
 - `devops/nginx/backflip-http.conf` / `backflip.conf` — `backflip_telemetry` zone (5r/m) + the `location = /api/public/telemetry/start` block with `client_max_body_size 2k`. Satisfies `L2-DEVOPS-27`.
 - `apps/web/app/_lib/telemetry/{config,payload,retention-cutoff}.test.ts` — unit suites. Satisfies `L2-TELEMETRY-30`.

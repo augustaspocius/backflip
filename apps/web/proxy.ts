@@ -2,11 +2,11 @@ import { getToken } from "next-auth/jwt"
 import { NextResponse, type NextRequest } from "next/server"
 
 /**
- * Admin auth boundary for the /backflip scope. Runs as a Next.js proxy
+ * Admin auth boundary for the /rnl-admin scope. Runs as a Next.js proxy
  * (the renamed `middleware` convention, Next 16+), on the edge runtime.
  *
  * Edge-safe: reads the Auth.js JWT via `getToken` (no db / node deps here).
- * - Unauthenticated request to a protected /backflip path → redirect to login
+ * - Unauthenticated request to a protected /rnl-admin path → redirect to login
  *   with the original path in `from`.
  * - Login + recovery routes are public (the "already signed-in → dashboard"
  *   redirect is validity-aware, so it lives on the login page, not here).
@@ -14,10 +14,10 @@ import { NextResponse, type NextRequest } from "next/server"
  * @spec L2-AUTH-01
  */
 
-const LOGIN_PATH = "/backflip/login"
+const LOGIN_PATH = "/rnl-admin/login"
 
 /**
- * Public auth routes within `/backflip` — reachable without a session. The
+ * Public auth routes within `/rnl-admin` — reachable without a session. The
  * password-recovery routes must work logged-out (emailed links); the login
  * page always renders (it redirects already-signed-in users to the dashboard
  * itself, via `auth()` — the edge can't validate the JWT's token version
@@ -25,12 +25,12 @@ const LOGIN_PATH = "/backflip/login"
  */
 const PUBLIC_PATHS = new Set([
   LOGIN_PATH,
-  "/backflip/forgot-password",
-  "/backflip/reset-password",
+  "/rnl-admin/forgot-password",
+  "/rnl-admin/reset-password",
   // Where Auth.js sends a rejected sign-in (`L2-AUTH-46`). Gating it would
   // bounce the one visitor it exists for — they have no session by
   // definition — straight back to login, with no reason given.
-  "/backflip/access-denied",
+  "/rnl-admin/access-denied",
 ])
 
 export async function proxy(request: NextRequest) {
@@ -53,10 +53,10 @@ export async function proxy(request: NextRequest) {
 
   if (!token) {
     const loginUrl = new URL(LOGIN_PATH, request.url)
-    // Carry the query string, not just the path: /backflip/connect holds the
+    // Carry the query string, not just the path: /rnl-admin/connect holds the
     // entire OAuth authorize request in its params and renders a fatal error
     // without them, so a logged-out connector handshake would dead-end
-    // (`L2-MCP-42`). The login page still constrains `from` to /backflip/*,
+    // (`L2-MCP-42`). The login page still constrains `from` to /rnl-admin/*,
     // so this cannot become an open redirect.
     loginUrl.searchParams.set("from", `${pathname}${request.nextUrl.search}`)
     return NextResponse.redirect(loginUrl)
@@ -68,5 +68,5 @@ export async function proxy(request: NextRequest) {
 export const config = {
   // Both gated scopes share one session and one redirect rule. `/learn/*` has
   // no public paths of its own — its login page is the admin one.
-  matcher: ["/backflip/:path*", "/learn/:path*"],
+  matcher: ["/rnl-admin/:path*", "/learn/:path*"],
 }

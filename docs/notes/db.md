@@ -63,7 +63,7 @@
 - `school_member.role` is deliberately separate from `user.role` (`L2-DB-05`): the former gates the future `/learn/*` surface (course/study access), the latter gates the operator console. One person may hold both roles independently.
 - Unique `(schoolId, userId)` on `school_member` — a role change is an `UPDATE`, not a second membership row. Index on `userId` for the "which schools is this person in" session-path lookup.
 - Both fks (`schoolId` → `school`, `userId` → `user`) cascade on delete — deleting a school or a user takes its memberships with it.
-- App code consumes both tables now: `apps/web/app/_lib/school/index.ts` (`getCurrentSchoolId`, `getMembership`, `requireMembership`, `requireTeacher`), the `/learn/*` shell, and `/backflip/school`'s invite flow (`_actions.ts`, `page.tsx`). See `docs/contracts/school.md` and `docs/notes/school.md`.
+- App code consumes both tables now: `apps/web/app/_lib/school/index.ts` (`getCurrentSchoolId`, `getMembership`, `requireMembership`, `requireTeacher`), the `/learn/*` shell, and `/rnl-admin/school`'s invite flow (`_actions.ts`, `page.tsx`). See `docs/contracts/school.md` and `docs/notes/school.md`.
 
 ## Course, deck, card, and enrollment tables (0021)
 - `course_status` enum (`draft|published`) + `course` + `deck` + `card` + `enrollment`, drizzle-kit generated, no hand edits and no seed. Owned by the (forthcoming) `course` domain (`L2-COURSE-01` … `L2-COURSE-04`); `L2-DB-40`..`L2-DB-43` are the db-side counterparts.

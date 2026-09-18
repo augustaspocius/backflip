@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
- * Anonymous start telemetry for the Backflip starter.
+ * Anonymous start telemetry for the Repeat and Learn starter.
  *
  * Runs once per `corepack yarn dev`, in the background, and reports that this
- * checkout started to the upstream project. It is how the maintainer sees that
- * the starter is being used at all — there is no other signal, since every
- * install runs on someone else's machine.
+ * checkout started to the endpoint named in `BACKFLIP_TELEMETRY_ENDPOINT`.
+ * There is no default endpoint: with the variable unset the script exits
+ * before touching the network or the install id.
  *
  * What is sent: a random install id generated on first run, the app version,
  * `process.platform`, and the Node major. Nothing else — no hostname, no user,
@@ -28,8 +28,6 @@ import { fileURLToPath } from "node:url"
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..")
 const STATE_DIR = join(ROOT, ".backflip")
 const INSTALL_ID_FILE = join(STATE_DIR, "install-id")
-const DEFAULT_ENDPOINT =
-  "https://backflip.dev-geddy.com/api/public/telemetry/start"
 const TIMEOUT_MS = 1500
 
 /**
@@ -93,7 +91,7 @@ function printNotice() {
   process.stdout.write(
     [
       "",
-      "  Backflip sends one anonymous ping per `yarn dev` (install id, version,",
+      "  Repeat and Learn sends one anonymous ping per `yarn dev` (install id, version,",
       "  OS, Node major) so the project can count real-world use.",
       "  Opt out any time: add BACKFLIP_TELEMETRY=off to .env.local",
       "",
@@ -103,6 +101,8 @@ function printNotice() {
 
 async function main() {
   if (optedOut()) return
+  const endpoint = envValue("BACKFLIP_TELEMETRY_ENDPOINT")
+  if (!endpoint) return
 
   const { id, fresh } = installId()
   if (fresh) printNotice()
@@ -110,7 +110,7 @@ async function main() {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
   try {
-    await fetch(envValue("BACKFLIP_TELEMETRY_ENDPOINT") || DEFAULT_ENDPOINT, {
+    await fetch(endpoint, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({

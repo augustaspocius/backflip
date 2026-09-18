@@ -1,13 +1,11 @@
-# backflip
+# Repeat and Learn
 
-Live: [backflip.dev-geddy.com](https://backflip.dev-geddy.com/)
-
-A full-stack **platform foundation** for kicking off new projects fast — auth, admin dashboard, database, and UI system already wired, so you build features instead of boilerplate.
+A spaced-repetition learning platform. Teachers write courses as decks of flashcards; students study them on an FSRS schedule. Built on a full-stack foundation with auth, an admin console, a database and a UI system already wired.
 
 **You have Docker and dev tools ready.**
 
 ```
-Prompt: clone github.com/dev-geddy/backflip
+Prompt: clone github.com/augustaspocius/backflip
 Prompt: set up and run this project locally
 Prompt: create a user for me and give me the login URL
 Prompt: build feature <...>
@@ -18,7 +16,7 @@ That's how you start a project now. Auth, database, admin console and UI system 
 
 Stack: Next.js 16 · React 19 · Tailwind v4 · shadcn/ui · Drizzle + Postgres · Auth.js · Turborepo · yarn 4.
 
-![Backflip admin console — Integrations, with AI providers and email configured per workspace](./docs/assets/admin-integrations.png)
+![Repeat and Learn admin console — Integrations, with AI providers and email configured per workspace](./docs/assets/admin-integrations.png)
 
 > **Self-hosted starter.** You run this yourself and supply your own secrets. The values in `.env.example` are local-dev defaults only — generate real secrets before deploying anywhere (see [Security](#security)).
 
@@ -57,7 +55,7 @@ corepack yarn dev            # app → http://localhost:3070
 ```
 
 ## Log in
-- Sign in at **http://localhost:3070/backflip/login** with your `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
+- Sign in at **http://localhost:3070/rnl-admin/login** with your `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
 - **After editing env:**
   - changed `ADMIN_*` in `.env.init` → rerun `corepack yarn init-owner`
   - changed `AUTH_*` (incl. Google) in `.env.local` → **restart `yarn dev`** (env loads at startup)
@@ -103,18 +101,18 @@ in place. Re-seed anytime by recreating `.env.init` and rerunning `init-owner`.
 - More commands + conventions: `.claude/skills/dev-workflow`.
 
 ## Anonymous usage telemetry
-`corepack yarn dev` sends **one anonymous ping** so the project can see that people actually run it — the only signal a self-hosted starter ever gets.
+Off by default. Set `BACKFLIP_TELEMETRY_ENDPOINT` in `.env.local` and `corepack yarn dev` sends **one anonymous ping** per start to that endpoint.
 
 **Sent:** a random install id generated on first run, the app version, your OS (`process.platform`), and your Node major version.
 **Not sent:** hostname, username, file paths, git remotes, environment variables, or anything from your project. On the receiving end the install id and the source IP are stored only as salted hashes; the raw IP is never written or logged.
 
-Opt out any time — add to `.env.local`:
+Turn it off again without removing the endpoint — add to `.env.local`:
 ```
 BACKFLIP_TELEMETRY=off
 ```
 The ping is fire-and-forget with a 1.5s timeout: offline, blocked, or endpoint down, your dev server starts exactly the same.
 
-**Your own deployment collects nothing** unless you set `TELEMETRY_HASH_SALT` — without it the ingest endpoint accepts requests and stores nothing. With it set, the figures appear on `/backflip` for owners.
+**Your own deployment collects nothing** unless you set `TELEMETRY_HASH_SALT` — without it the ingest endpoint accepts requests and stores nothing. With it set, the figures appear on `/rnl-admin` for owners.
 
 ## Deployment
 Deploy to a DigitalOcean droplet — from your machine, GitHub Actions, or Drone CI.
@@ -129,10 +127,4 @@ Before deploying, generate real secrets — never reuse the `.env.example` defau
 To report a vulnerability, see [`SECURITY.md`](./SECURITY.md).
 
 ## License
-[MIT](./LICENSE) © dev-geddy
-
-<!-- README view pixel. Counts image fetches of this README, served by the live
-     deployment (see the GitHub integration in the admin console). GitHub proxies
-     and caches README images through Camo, so the figure undercounts and cannot
-     identify a reader: no IP, user agent or referrer is stored. -->
-![](https://backflip.dev-geddy.com/api/public/github/pixel?repo=dev-geddy/backflip)
+[MIT](./LICENSE)

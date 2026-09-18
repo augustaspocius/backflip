@@ -8,7 +8,7 @@
 - `packages/db/migrations/0005_clear_mattie_franklin.sql` — drizzle-kit generated `CREATE TABLE analytics_config`.
 - `packages/db/migrations/0006_seed_analytics_config.sql` — hand-written custom migration (`drizzle-kit generate --custom`), seeds the singleton row + default banner copy, `ON CONFLICT ("kind") DO NOTHING`. Fixed literal uuid for the seed id (the pk has no DB-level default — `$defaultFn` is app-side only). Satisfies `L2-ANALYTICS-01`, `L2-ANALYTICS-08`.
 - `packages/db/migrations/0008_reword_cookie_banner.sql` — custom migration; rewrites the banner copy seeded by 0006. Guarded `WHERE "cookieBannerText" = <the 0006 literal>`, so an operator-edited banner is never clobbered (`L2-ANALYTICS-08`) and a re-run matches nothing. 0006 is left untouched — applied migrations are immutable; a fresh DB runs 0006 then 0008 and lands on the new copy.
-- `settings/_actions.ts` → `saveAnalyticsConfig` — auth + `canAccessSettings` gate → uppercase/validate id → upsert on `kind` → `revalidatePath("/backflip/settings")`. Mirrors `saveEmailConfig` minus encryption. Satisfies `L2-ANALYTICS-02`, `L2-ANALYTICS-12`, `L2-ANALYTICS-14/15`.
+- `settings/_actions.ts` → `saveAnalyticsConfig` — auth + `canAccessSettings` gate → uppercase/validate id → upsert on `kind` → `revalidatePath("/rnl-admin/settings")`. Mirrors `saveEmailConfig` minus encryption. Satisfies `L2-ANALYTICS-02`, `L2-ANALYTICS-12`, `L2-ANALYTICS-14/15`.
 - `settings/_components/analytics-integration.tsx` — client detail pane; `useActionState(saveAnalyticsConfig)`; exports the `AnalyticsConfig` view-model type (page.tsx imports it type-only). Banner switch is controlled state so the copy field and the explainer react live. Satisfies `L2-ANALYTICS-05`.
 - `settings/_components/integrations-view.tsx` — `Selection` widened to `"ai" | "email" | "analytics"`; third `ListRow` (GA tile, subtitle = the measurement id when set, else "Not configured"); detail switch became a chain.
 - `settings/_components/integrations-rail.tsx` — added `analytics` ABOUT entry (GA4 docs); the second card swaps "Keys encrypted at rest" for "Nothing secret here" on the analytics pane, since there is no key.
@@ -25,10 +25,10 @@ Default is a conversion problem, not a legal one — the consent gate is strict 
 - Current default asks for the visit, states the benefit, bounds the use ("we only ever look at totals, and never use it for ads"), then names Google Analytics + cookies. Same facts, cost last.
 - Claims are about *our* use only. Don't add promises about what Google does with it — an operator can enable Google Signals/ads features and make them false.
 - Layout stays symmetric: Decline and Accept, one click each, same bar. EDPB requires reject to be equally easy; it does not require identical styling, so primary Accept + outline Decline stays compliant. Never remove Decline, never bury it behind a second layer.
-- Copy is operator-editable at `/backflip/settings`, so retuning needs no deploy. `FALLBACK_TEXT` in `analytics-gate.tsx` mirrors the seed and must be updated with it.
+- Copy is operator-editable at `/rnl-admin/settings`, so retuning needs no deploy. `FALLBACK_TEXT` in `analytics-gate.tsx` mirrors the seed and must be updated with it.
 
 ## Why the config is fetched, not server-rendered
-Public pages (just `/` since `L2-UI-63`) build as `○` static. Reading `analytics_config` in those pages — or in the root layout — would flip them to `ƒ`, and the root layout is shared with `/backflip`, so it would drag the whole app dynamic.
+Public pages (just `/` since `L2-UI-63`) build as `○` static. Reading `analytics_config` in those pages — or in the root layout — would flip them to `ƒ`, and the root layout is shared with `/rnl-admin`, so it would drag the whole app dynamic.
 
 Chosen: **static pages + client fetch of `/api/public/analytics-config`.** The route is the only dynamic piece; the pages stay prerendered. Verified in the build route table (`L2-ANALYTICS-11`, `L2-ANALYTICS-20`).
 

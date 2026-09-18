@@ -3,7 +3,7 @@
 > L3 = how / volatile. AI writes free. Cites L2 IDs up. Matches code as-is.
 
 ## What this is
-A Claude-compatible **remote MCP connector**: a read-only tool surface at `/api/mcp` (Streamable HTTP, `L2-MCP-01`) protected by an in-app **OAuth 2.1 authorization server** (`/api/oauth/*` + `/.well-known/*`, `L2-MCP-10`–`L2-MCP-17`). Lets a Claude client (claude.ai custom connector, Claude Desktop, Claude Code) authenticate as a Backflip admin user and call a handful of dashboard/user/settings-read tools, scoped to that user's role. No write tools in this phase (`L2-MCP-09`).
+A Claude-compatible **remote MCP connector**: a read-only tool surface at `/api/mcp` (Streamable HTTP, `L2-MCP-01`) protected by an in-app **OAuth 2.1 authorization server** (`/api/oauth/*` + `/.well-known/*`, `L2-MCP-10`–`L2-MCP-17`). Lets a Claude client (claude.ai custom connector, Claude Desktop, Claude Code) authenticate as a Repeat and Learn admin user and call a handful of dashboard/user/settings-read tools, scoped to that user's role. No write tools in this phase (`L2-MCP-09`).
 
 Whole domain is opt-in and off by default: until an owner enables it (`connector_config.enabled`, `L2-MCP-25`) every connector route 404s (`L2-MCP-37`, `L2-INF-17`).
 
@@ -13,16 +13,16 @@ Everything below exists on disk — the domain landed across migrations `0009`�
 - `apps/web/app/api/mcp/route.ts` — the MCP endpoint. `POST` = JSON-RPC over Streamable HTTP; `GET`/`DELETE` answered by the SDK handler. Stateless: a fresh `McpServer` per request (no MCP session id) — simplest match for Next's request-scoped model. `runtime="nodejs"` (needs `pg`). Satisfies `L2-MCP-01`.
 - `apps/web/app/_lib/mcp/server.ts` — `buildMcpServer(ctx: McpAuthContext)` factory. Registers only the tools in the scopes ∩ capability intersection (`L2-MCP-02`, `L2-MCP-20`) — an unauthorized tool is never registered, so it can't appear in `tools/list` or be called.
 - `apps/web/app/_lib/mcp/tools/*.ts` — one file per tool: `whoami` (`L2-MCP-04`), `list_users` (`L2-MCP-05`), `get_user` (`L2-MCP-06`), `get_platform_status` (`L2-MCP-07`), `get_dashboard_summary` (`L2-MCP-08`). Each declares `{readOnlyHint:true, destructiveHint:false, openWorldHint:false}` (`L2-MCP-09`).
-- `apps/web/app/backflip/(protected)/settings/mcp-capabilities/page.tsx` — the owner-facing capabilities page, rendered from `TOOL_DEFS` + `SCOPE_LABELS` (`L2-MCP-64`), plus a **Your connections** section reconciling the maximum surface against what the signed-in owner's grants can actually see (`L2-MCP-65`). Tool rows the owner's connections cannot reach are marked, never hidden — hiding is what made the original confusion possible.
+- `apps/web/app/rnl-admin/(protected)/settings/mcp-capabilities/page.tsx` — the owner-facing capabilities page, rendered from `TOOL_DEFS` + `SCOPE_LABELS` (`L2-MCP-64`), plus a **Your connections** section reconciling the maximum surface against what the signed-in owner's grants can actually see (`L2-MCP-65`). Tool rows the owner's connections cannot reach are marked, never hidden — hiding is what made the original confusion possible.
 - `apps/web/app/_lib/oauth/grant-health.ts` — `grantHealth` (`L2-MCP-65`), re-exporting the ceiling helpers. Pure, so `grant-health.test.ts` pins the diagnosis without a token or a database.
 - `apps/web/app/_lib/oauth/scope-gaps.ts` — `clientCeilingHealth` / `unreachableForRole` / `gaps` (`L2-MCP-65`, `L2-MCP-66`). Split out of `grant-health.ts` because it must be importable from a `"use client"` component: `grant-health` reaches `TOOL_DEFS`, which reaches the db client, and the settings client table pulled `pg` into the browser bundle until the split.
-- `apps/web/app/backflip/(protected)/settings/_components/connector-setup-steps.tsx` — the five-step guided setup, steps 1–2 driven by real state (`L2-MCP-67`).
-- `apps/web/app/backflip/(protected)/settings/_components/connector-clients.tsx` — client rows now show their capability ceiling; a client registered before newer scopes gets an amber "Registered before newer capabilities existed" block and a one-click **Allow all capabilities** (`updateConnectorClientScopes` → `updateClientScopes`, `L2-MCP-66`). The create dialog picks the ceiling up front.
-- `apps/web/app/backflip/(protected)/account/_components/connections-section.tsx` — per-grant "sees N of M tools" plus the stale flag and the tools a reconnect unlocks (`L2-MCP-65`).
+- `apps/web/app/rnl-admin/(protected)/settings/_components/connector-setup-steps.tsx` — the five-step guided setup, steps 1–2 driven by real state (`L2-MCP-67`).
+- `apps/web/app/rnl-admin/(protected)/settings/_components/connector-clients.tsx` — client rows now show their capability ceiling; a client registered before newer scopes gets an amber "Registered before newer capabilities existed" block and a one-click **Allow all capabilities** (`updateConnectorClientScopes` → `updateClientScopes`, `L2-MCP-66`). The create dialog picks the ceiling up front.
+- `apps/web/app/rnl-admin/(protected)/account/_components/connections-section.tsx` — per-grant "sees N of M tools" plus the stale flag and the tools a reconnect unlocks (`L2-MCP-65`).
 - `apps/web/app/_lib/oauth/types.ts` — Shared types: `MCP_SCOPES` (`L2-MCP-18`), `McpAuthContext` (`L2-MCP-19`), `OAuthGrant`, `AuthorizationRequest`, `OAuthErrorCode`/`OAuthFailure`, `IssuedTokens`. Pure, no runtime deps — safe from routes, libs, tools, tests. `@spec L2-MCP-18, L2-MCP-19`.
 - `apps/web/app/_lib/oauth/config.ts` — `isMcpEnabled()` (async: DB flag ∧ not force-disabled, short-TTL cached), `isMcpForcedOff()`, issuer/resource URL derivation from `AUTH_URL`, token/code TTL constants (`L2-MCP-24`, `L2-MCP-25`, `L2-MCP-54`).
 - `apps/web/app/_lib/oauth/connector-config.ts` — the `connector_config` row: enabled flag, `dcrMode`, redirect-host allowlist; `isHostAllowed`/`isValidHostEntry`/`isLoopbackHost` primitives (`L2-MCP-47`, `L2-MCP-48`, `L2-MCP-49`).
-- `apps/web/app/backflip/(protected)/settings/_components/connector-*.tsx` — the owner-only MCP Connectors tab: enable toggle, the copyable **remote MCP server URL**, registration mode, host allowlist, client table + create-client dialog with the one-time secret reveal (`L2-MCP-47`, `L2-MCP-47a`, `L2-MCP-50`). `connector-copy-field.tsx` is the shared label + value + copy control used for all three strings an owner moves into Claude.
+- `apps/web/app/rnl-admin/(protected)/settings/_components/connector-*.tsx` — the owner-only MCP Connectors tab: enable toggle, the copyable **remote MCP server URL**, registration mode, host allowlist, client table + create-client dialog with the one-time secret reveal (`L2-MCP-47`, `L2-MCP-47a`, `L2-MCP-50`). `connector-copy-field.tsx` is the shared label + value + copy control used for all three strings an owner moves into Claude.
   - The endpoint is `<origin>/api/mcp` — **not** `<origin>/mcp`, which 404s. It is rendered from `mcpResourceUrl()` rather than written by hand precisely because that mistake is easy to make and looks like a broken connector rather than a typo.
   - The create form has a "Use Claude's callback" button that appends `https://claude.ai/api/mcp/auth_callback`; Claude Code needs the loopback checkbox instead (`L2-MCP-51`).
 - `apps/web/app/_lib/oauth/scopes.ts` — scope ↔ capability identity (`L2-MCP-18`) plus human-readable labels for the consent screen (`L2-MCP-14`).
@@ -40,12 +40,12 @@ Everything below exists on disk — the domain landed across migrations `0009`�
 - `apps/web/app/api/oauth/authorization-server-metadata/route.ts` — RFC 8414 metadata (`L2-MCP-10`).
 - `apps/web/app/api/oauth/protected-resource-metadata/route.ts` — RFC 9728 metadata (`L2-MCP-11`).
 - `apps/web/next.config.ts` — `rewrites()` maps `/.well-known/oauth-authorization-server` and `/.well-known/oauth-protected-resource` (bare **and** `/:path*`-suffixed, so the `/api/mcp` form resolves) onto the two metadata routes above. The App Router does not route dot-prefixed folders, so the documents cannot live at `app/.well-known/…` — this rewrite is the reason the well-known URLs work.
-- `apps/web/app/backflip/(protected)/connect/` — consent screen + `_actions.ts` (`approveAuthorization`, `denyAuthorization`) (`L2-MCP-14`).
-- `apps/web/app/backflip/(protected)/account/_components/connections-section.tsx` — connected-clients list + Disconnect, on the existing self-service account page (`account/_actions.ts` already hosts `saveProfile`/`changePassword`/email-change per `L2-AUTH-27` — this adds a grants section alongside; capability `account`, `L2-MCP-17`).
+- `apps/web/app/rnl-admin/(protected)/connect/` — consent screen + `_actions.ts` (`approveAuthorization`, `denyAuthorization`) (`L2-MCP-14`).
+- `apps/web/app/rnl-admin/(protected)/account/_components/connections-section.tsx` — connected-clients list + Disconnect, on the existing self-service account page (`account/_actions.ts` already hosts `saveProfile`/`changePassword`/email-change per `L2-AUTH-27` — this adds a grants section alongside; capability `account`, `L2-MCP-17`).
 - `packages/db/src/schema.ts` — new tables `oauth_client`, `oauth_auth_code`, `oauth_token` (`L2-MCP-21`/`L2-MCP-22`/`L2-MCP-23`, `db` counterparts `L2-DB-25`/`L2-DB-26`/`L2-DB-27`) and `connector_config` (`L2-MCP-48`, `L2-DB-28`).
 
 ## Running it locally
-1. Turn the connector on: `/backflip/settings` → MCP Connectors → Enable. It is a **database flag** (`connector_config.enabled`, default off, `L2-MCP-25`) like every other integration here, not an env var. While it is off every route in this domain 404s, including the well-known documents — a "connector not found" symptom is usually just this. `MCP_ENABLED=false` in the environment forces it off regardless of the toggle (deploy-level kill switch); unset means the database decides. The resolved flag is cached in-process for ~30s, so a toggle can take that long to reach other processes (`L2-MCP-54`).
+1. Turn the connector on: `/rnl-admin/settings` → MCP Connectors → Enable. It is a **database flag** (`connector_config.enabled`, default off, `L2-MCP-25`) like every other integration here, not an env var. While it is off every route in this domain 404s, including the well-known documents — a "connector not found" symptom is usually just this. `MCP_ENABLED=false` in the environment forces it off regardless of the toggle (deploy-level kill switch); unset means the database decides. The resolved flag is cached in-process for ~30s, so a toggle can take that long to reach other processes (`L2-MCP-54`).
 2. `AUTH_URL` must be the origin the Claude client will actually hit — it's both the Auth.js issuer/canonical-URL var (`L2-AUTH-07`) and the OAuth `issuer`/PRM `resource` origin (`L2-MCP-10`, `L2-MCP-11`, `L2-MCP-25`). A mismatch between what's advertised and what's called breaks the resource-audience check (`L2-MCP-33`).
 3. `corepack yarn dev` (app on 3070, `L2-INF-03`) or the docker `web` profile (3071, `L2-INF-01`) — db must be up either way.
 4. `db:migrate` to create the connector tables (migrations `0009`–`0011`, `L2-DB-08`). Locally `AUTH_URL` may be left unset — `issuerOrigin()` falls back to `http://localhost:3070` outside production.
@@ -55,7 +55,7 @@ Everything below exists on disk — the domain landed across migrations `0009`�
 Claude's custom-connector UI needs a **publicly reachable https origin** — plain `localhost` doesn't work for claude.ai (Claude Desktop/Code may differ; verify per client). For local testing, tunnel 3070/3071 (ngrok, cloudflared, etc.) and point `AUTH_URL` at the tunnel's https URL *before* starting the app, since the issuer identity is baked into every token's `resource` claim (`L2-MCP-33`).
 
 **Default path — manual client (`dcrMode = "off"`).** Dynamic registration is off out of the box, so nobody can create a client without an owner doing it deliberately:
-1. `/backflip/settings` → MCP Connectors → Create client. Name it, give it the redirect URI `https://claude.ai/api/mcp/auth_callback` (and/or the `claude.com` one). For Claude Code instead, tick "Native client" — it redirects to `http://127.0.0.1:<ephemeral>/callback`, so it needs port-agnostic loopback matching (`L2-MCP-51`).
+1. `/rnl-admin/settings` → MCP Connectors → Create client. Name it, give it the redirect URI `https://claude.ai/api/mcp/auth_callback` (and/or the `claude.com` one). For Claude Code instead, tick "Native client" — it redirects to `http://127.0.0.1:<ephemeral>/callback`, so it needs port-agnostic loopback matching (`L2-MCP-51`).
 2. Copy the `client_id` and `client_secret` — **the secret is shown once** (`L2-MCP-50`).
 3. claude.ai → Settings → Connectors → Add custom connector → `https://<origin>/api/mcp`, then expand **Advanced settings** and paste both values. Claude skips registration entirely and goes straight to authorize.
 
@@ -64,8 +64,8 @@ Redirect hosts are allowlisted (`claude.ai`, `claude.com` seeded) and checked bo
 **Self-registration path** (only if an owner sets `dcrMode` to `allowlist` or `open`):
 1. claude.ai → Settings → Connectors → Add custom connector → `https://<origin>/api/mcp`, Advanced settings left blank.
 2. Claude reads `WWW-Authenticate` off an unauthenticated probe (`L2-MCP-03`), fetches the protected-resource + authorization-server metadata (`L2-MCP-10`, `L2-MCP-11`), then DCRs itself via `POST /api/oauth/register` (`L2-MCP-12`). With `dcrMode = "off"` that endpoint is `404` and this path simply does not exist.
-3. Claude opens `/api/oauth/authorize` in a browser tab. No Backflip session → redirected to `/backflip/login?from=…` (`L2-MCP-13`, the standard `/backflip` gate, `L2-AUTH-01`).
-4. After login, lands on `/backflip/connect` — consent screen: client name, requested scopes in plain language, the signed-in account, Allow/Deny (`L2-MCP-14`).
+3. Claude opens `/api/oauth/authorize` in a browser tab. No Repeat and Learn session → redirected to `/rnl-admin/login?from=…` (`L2-MCP-13`, the standard `/rnl-admin` gate, `L2-AUTH-01`).
+4. After login, lands on `/rnl-admin/connect` — consent screen: client name, requested scopes in plain language, the signed-in account, Allow/Deny (`L2-MCP-14`).
 5. Allow → `approveAuthorization` mints a single-use authorization code, redirects back to Claude's `redirect_uri` (`L2-MCP-32`).
 6. Claude exchanges the code at `/api/oauth/token` with its PKCE `code_verifier` (`L2-MCP-15`, `L2-MCP-26`) → access + refresh token pair (`L2-MCP-24` lifetimes).
 7. Every `/api/mcp` call carries `Authorization: Bearer <access_token>`; `requireBearer` validates it and resolves `McpAuthContext` live (`L2-MCP-03`, `L2-MCP-19`).
@@ -78,7 +78,7 @@ Redirect hosts are allowlisted (`claude.ai`, `claude.com` seeded) and checked bo
 |---|---|---|
 | register | `POST /api/oauth/register` (DCR, open but rate-limited) | `L2-MCP-12`, `L2-MCP-30` |
 | authorize | `GET /api/oauth/authorize` (client + redirect-URI + PKCE validated before any redirect) | `L2-MCP-13`, `L2-MCP-26`, `L2-MCP-31` |
-| consent | `/backflip/connect` (Allow/Deny, inside the `/backflip` auth gate) | `L2-MCP-14` |
+| consent | `/rnl-admin/connect` (Allow/Deny, inside the `/rnl-admin` auth gate) | `L2-MCP-14` |
 | code | single-use auth code, 60 s TTL, hash-only stored | `L2-MCP-22`, `L2-MCP-28`, `L2-MCP-32` |
 | token | `POST /api/oauth/token` (form-encoded, PKCE verifier, `no-store`) | `L2-MCP-15`, `L2-MCP-24` |
 | bearer | `Authorization: Bearer …` on every `/api/mcp` call | `L2-MCP-03`, `L2-MCP-29`, `L2-MCP-33` |
@@ -113,7 +113,7 @@ Two independent ceilings sit between "the server has a tool" and "your client ca
 1. **The grant's scopes are frozen at consent.** `oauth_token.scopes` is written when the user approves and never grows. Add a scope to `MCP_SCOPES` and every existing grant keeps the old set, so the new tools are not registered for it (`L2-MCP-20`) and simply are not in `tools/list`. The client cannot tell that apart from "this server has no such tools" — which is exactly what a Claude client will confidently report. **Fix: disconnect and reconnect.**
 2. **The client's own `scopes` column is a ceiling** (`L2-MCP-66`). A client registered before the scope existed can never be granted it, so reconnecting alone changes nothing — this is the one failure a reconnect does not fix. **Fix: widen the client in Integrations → Clients → Allow all capabilities, then reconnect.**
 
-Diagnose both from the admin rather than by asking the connected client: `/backflip/settings/mcp-capabilities` shows, per connection, how many of the tools it can see and what a reconnect would unlock; the client list flags a limited ceiling. `whoami` also returns the granted scopes, which is the fastest check from the client side.
+Diagnose both from the admin rather than by asking the connected client: `/rnl-admin/settings/mcp-capabilities` shows, per connection, how many of the tools it can see and what a reconnect would unlock; the client list flags a limited ceiling. `whoami` also returns the granted scopes, which is the fastest check from the client side.
 
 The ordering matters when both apply: widen the client **first**, then reconnect. Reconnecting against an un-widened client just re-mints the same narrow grant.
 
@@ -133,7 +133,7 @@ The ordering matters when both apply: widen the client **first**, then reconnect
 - **Never import `grant-health.ts` from a `"use client"` module.** It reaches `TOOL_DEFS` → `tools/users.ts` → `@workspace/db` → `pg`, and the build fails with a module-not-found trace through `pg/lib/utils.js`. Import `scope-gaps.ts` instead; it holds exactly the helpers a client component needs.
 
 ## State
-Implemented end to end. On disk: the three tables + migration `0009_curious_rumiko_fujikawa.sql` (applied locally), the full `_lib/oauth/*` module set, the six `/api/oauth/*` route handlers, the `.well-known` rewrites in `next.config.ts`, `/api/mcp` + `_lib/mcp/*` with five read-only tools, `/backflip/connect`, the account connections section, the `/backflip/settings/mcp-capabilities` page (`L2-MCP-64`), the grant/ceiling reconciliation (`L2-MCP-65`, `L2-MCP-66`) and the guided setup walkthrough (`L2-MCP-67`), and the nginx/Caddy edge config.
+Implemented end to end. On disk: the three tables + migration `0009_curious_rumiko_fujikawa.sql` (applied locally), the full `_lib/oauth/*` module set, the six `/api/oauth/*` route handlers, the `.well-known` rewrites in `next.config.ts`, `/api/mcp` + `_lib/mcp/*` with five read-only tools, `/rnl-admin/connect`, the account connections section, the `/rnl-admin/settings/mcp-capabilities` page (`L2-MCP-64`), the grant/ceiling reconciliation (`L2-MCP-65`, `L2-MCP-66`) and the guided setup walkthrough (`L2-MCP-67`), and the nginx/Caddy edge config.
 
 The L2 contract (`docs/contracts/mcp.md`) and the `db`/`auth`/`devops`/`infra` additions are **approved**, and the three L1 lines (governed domain `mcp`, `L1-STACK-12`, `L1-CON-06`) are in the constitution.
 
@@ -169,7 +169,7 @@ An adversarial review ran over the whole domain before it landed. Fixed in place
 
 Accepted, not defects:
 - `/api/oauth/authorize` is an unauthenticated redirector to any registered `redirect_uri`, and DCR is open by design — so anyone can register `https://evil.example` and get a redirect off this domain. RFC 6749 §4.1.2.1 behaviour, shared by every OAuth AS; worth knowing as a phishing primitive on your domain.
-- Clickjacking is already covered — `next.config.ts` applies `X-Frame-Options: DENY` + CSP `frame-ancestors 'none'` to `/:path*`, which includes `/backflip/connect`.
+- Clickjacking is already covered — `next.config.ts` applies `X-Frame-Options: DENY` + CSP `frame-ancestors 'none'` to `/:path*`, which includes `/rnl-admin/connect`.
 - Consent CSRF is covered by Next's server-action origin check; nginx passes `Host` and sets no `X-Forwarded-Host`.
 
 ## TODO

@@ -212,7 +212,7 @@ export const connectorDcrMode = pgEnum("connector_dcr_mode", [
 
 /**
  * Connector (MCP) settings — single row, owner-managed under
- * `/backflip/settings`. Holds the redirect-host allowlist enforced for every
+ * `/rnl-admin/settings`. Holds the redirect-host allowlist enforced for every
  * OAuth client (manual or dynamic) and the dynamic-registration mode.
  *
  * `redirectHosts` seeds to Claude's two callback origins; an owner may add
@@ -842,7 +842,9 @@ export const reviewLogs = pgTable(
     stability: real("stability").notNull(),
     difficulty: real("difficulty").notNull(),
     scheduledDays: integer("scheduledDays").notNull(),
-    reviewedAt: timestamp("reviewedAt", { mode: "date" }).notNull().defaultNow(),
+    reviewedAt: timestamp("reviewedAt", { mode: "date" })
+      .notNull()
+      .defaultNow(),
   },
   (t) => [
     index("review_log_user_reviewed_idx").on(t.userId, t.reviewedAt),

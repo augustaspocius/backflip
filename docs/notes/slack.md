@@ -5,7 +5,7 @@
 ## File map
 - `packages/db/src/schema.ts` — `slack_app` (`@spec L2-DB-30, L2-SLACK-01`) + `slack_webhook` (`@spec L2-DB-31, L2-SLACK-02`). Many rows each; `name` / `label` unique.
 - `packages/db/migrations/0012_lethal_sandman.sql` — creates both tables. Satisfies `L2-DB-08`.
-- `apps/web/app/backflip/(protected)/settings/_lib/slack.ts` — `slackAuthTest(botToken)` (`POST /api/auth.test`), `postSlackWebhook(url, text)`, `isSlackWebhookUrl(url)`. `server-only`. Satisfies `L2-SLACK-05`, `L2-SLACK-06`, `L2-SLACK-11`.
+- `apps/web/app/rnl-admin/(protected)/settings/_lib/slack.ts` — `slackAuthTest(botToken)` (`POST /api/auth.test`), `postSlackWebhook(url, text)`, `isSlackWebhookUrl(url)`. `server-only`. Satisfies `L2-SLACK-05`, `L2-SLACK-06`, `L2-SLACK-11`.
 - `settings/_actions.ts` — `saveSlackApp` / `deleteSlackApp` / `testSlackApp`, `saveSlackWebhook` / `deleteSlackWebhook` / `testSlackWebhook`. Create-vs-update keys off a hidden `id` field. Satisfies `L2-SLACK-03/04/05/06/07/10/12/13`.
 - `settings/_components/slack-apps.tsx` — apps table + add/edit dialog + delete confirm (`AlertDialog`) + per-row Test. `SlackAppRow` type lives here. Satisfies `L2-SLACK-03`.
 - `settings/_components/slack-webhooks.tsx` — same shape for webhooks; Test button reads "Send test". `SlackWebhookRow` type lives here. Satisfies `L2-SLACK-04`.

@@ -1,13 +1,13 @@
 /**
  * Admin shell chrome themes — the Slack-style sidebar + header palettes a user
- * picks in `/backflip/account`. Each id matches a `[data-chrome-theme="…"]`
+ * picks in `/rnl-admin/account`. Each id matches a `[data-chrome-theme="…"]`
  * block in `packages/ui/src/styles/globals.css`; this module is the single
  * source of truth for which ids exist, what they are called, and the swatch
  * colors the picker previews.
  *
  * Named themes are **fixed palettes**: a dark theme stays dark when the app is
  * in light mode, and vice versa. Only `default` follows the light/dark toggle.
- * That is the point — the chrome is how you tell two Backflip platforms apart
+ * That is the point — the chrome is how you tell two Repeat and Learn platforms apart
  * at a glance, so it must not change under you when the mode flips.
  *
  * Saturation stays low — ≤ 0.10 on the dark surfaces, ≤ 0.03 on the light

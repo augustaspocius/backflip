@@ -41,7 +41,7 @@ export function appUrl() {
 
 /** Resolved brand name for subjects/copy (Resend "from name" or default). */
 function appName(cfg: { fromName: string | null }) {
-  return cfg.fromName?.trim() || "Backflip"
+  return cfg.fromName?.trim() || "Repeat and Learn"
 }
 
 /**
@@ -106,7 +106,7 @@ export function sendWelcomeEmail(params: {
   to: string
   name?: string | null
 }): Promise<SendResult> {
-  const loginUrl = `${appUrl()}/backflip/login`
+  const loginUrl = `${appUrl()}/rnl-admin/login`
   return send(({ appName }) => ({
     to: params.to,
     subject: `Welcome to ${appName}`,
@@ -140,7 +140,7 @@ export function sendPasswordChangedEmail(params: {
   to: string
   name?: string | null
 }): Promise<SendResult> {
-  const loginUrl = `${appUrl()}/backflip/login`
+  const loginUrl = `${appUrl()}/rnl-admin/login`
   return send(({ appName }) => ({
     to: params.to,
     subject: `Your ${appName} password was changed`,
