@@ -78,8 +78,11 @@ async function migrateAndSeed() {
     // `card`. Listed explicitly anyway, children before parents, so the
     // intent — every authoring row is wiped and reseeded fresh each run — is
     // readable without having to reason about which FK does it implicitly.
+    // `review_log`/`card_state` (FK → user and card) lead the list for the
+    // same reason: study progress is wiped with the cards it refers to.
     await db.execute(
       sql`truncate table
+        "review_log", "card_state",
         "enrollment", "card", "deck", "course", "school_member",
         "user", "account", "session", "verificationToken"
         cascade`

@@ -80,8 +80,15 @@ export function CourseHeader({
         </div>
 
         <Link
-          href={`/learn/courses/${courseId}/students`}
+          href={`/learn/courses/${courseId}/progress`}
           className="text-muted-foreground hover:text-foreground ml-auto text-sm"
+        >
+          Progress
+        </Link>
+
+        <Link
+          href={`/learn/courses/${courseId}/students`}
+          className="text-muted-foreground hover:text-foreground text-sm"
         >
           Students
         </Link>

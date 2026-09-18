@@ -71,6 +71,8 @@ export function StudySession({ queue }: { queue: QueueCard[] }) {
     return (
       <div className="space-y-4 text-center">
         <p className="text-lg">Nothing left to review.</p>
+        {/* A failure on the last card must still show once the queue ends. */}
+        <ActionMessage state={result} />
         <Link href="/learn" className="text-sm underline">
           Back to your courses
         </Link>
